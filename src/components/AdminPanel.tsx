@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Settings, RefreshCw, Vote, Trophy, Plus, Users, Trash2 } from "lucide-react";
+import { Settings, RefreshCw, Vote, Trophy, Plus, Users, Trash2, UserPlus } from "lucide-react";
 
 interface Song {
   id: string;
@@ -37,10 +37,12 @@ export function AdminPanel({
   allUsers: User[];
 }) {
   const [week, setWeek] = useState<Week | null>(currentWeek);
+  const [users, setUsers] = useState<User[]>(allUsers);
   const [loading, setLoading] = useState<string | null>(null);
   const [newTheme, setNewTheme] = useState("");
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
+  const [newMemberName, setNewMemberName] = useState("");
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
   function toast(text: string, ok = true) {
@@ -64,6 +66,43 @@ export function AdminPanel({
       setNewEnd("");
       toast("Week created!");
     } else {
+      toast(data.error ?? "Error", false);
+    }
+    setLoading(null);
+  }
+
+  async function addMember() {
+    if (!newMemberName.trim()) return;
+    setLoading("add-member");
+    const res = await fetch("/api/admin/members", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newMemberName.trim() }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setUsers((u) => [...u, data.user]);
+      setNewMemberName("");
+      toast("Member added!");
+    } else {
+      toast(data.error ?? "Error", false);
+    }
+    setLoading(null);
+  }
+
+  async function removeMember(userId: string) {
+    if (!confirm("Remove this member?")) return;
+    setLoading("remove-" + userId);
+    const res = await fetch("/api/admin/members", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (res.ok) {
+      setUsers((u) => u.filter((m) => m.id !== userId));
+      toast("Member removed.");
+    } else {
+      const data = await res.json();
       toast(data.error ?? "Error", false);
     }
     setLoading(null);
@@ -274,13 +313,34 @@ export function AdminPanel({
       {/* Members */}
       <section className="rounded-2xl border border-[#2a2a45] bg-[#16162a] p-6">
         <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
-          <Users size={18} className="text-[#e8688a]" /> Members ({allUsers.length})
+          <Users size={18} className="text-[#e8688a]" /> Members ({users.length})
         </h2>
+
+        {/* Add member */}
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            placeholder="Username"
+            value={newMemberName}
+            onChange={(e) => setNewMemberName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addMember()}
+            className="flex-1 px-3 py-2 rounded-xl bg-[#0f0f1e] border border-[#2a2a45] text-[#f5f0e0] text-sm placeholder:text-[#f5f0e0]/30 focus:outline-none focus:border-[#e8688a]"
+          />
+          <button
+            onClick={addMember}
+            disabled={!newMemberName.trim() || !!loading}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#e8688a]/10 border border-[#e8688a]/30 text-[#e8688a] font-semibold text-sm hover:bg-[#e8688a]/20 transition-colors disabled:opacity-40"
+          >
+            <UserPlus size={14} />
+            Add
+          </button>
+        </div>
+
         <div className="space-y-2">
-          {allUsers.map((user) => (
+          {users.map((user) => (
             <div
               key={user.id}
-              className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[#0f0f1e] transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[#0f0f1e] transition-colors group"
             >
               {user.image ? (
                 <Image
@@ -296,10 +356,18 @@ export function AdminPanel({
                 </div>
               )}
               <span className="text-sm text-[#f5f0e0]/80">{user.name}</span>
-              {user.isAdmin && (
+              {user.isAdmin ? (
                 <span className="ml-auto text-xs px-2 py-0.5 rounded-lg bg-[#a259c4]/10 text-[#a259c4] border border-[#a259c4]/20">
                   admin
                 </span>
+              ) : (
+                <button
+                  onClick={() => removeMember(user.id)}
+                  disabled={!!loading}
+                  className="ml-auto opacity-0 group-hover:opacity-100 text-[#f5f0e0]/30 hover:text-[#e8688a] transition-all disabled:opacity-20"
+                >
+                  <Trash2 size={14} />
+                </button>
               )}
             </div>
           ))}

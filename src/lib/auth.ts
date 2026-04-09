@@ -28,10 +28,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!code || !name) return null;
         if (code !== process.env.INVITE_CODE) return null;
 
-        let user = await prisma.user.findFirst({ where: { name } });
-        if (!user) {
-          user = await prisma.user.create({ data: { name } });
-        }
+        const user = await prisma.user.findFirst({ where: { name } });
+        if (!user) throw new Error("InvalidUsername");
         return user;
       },
     }),

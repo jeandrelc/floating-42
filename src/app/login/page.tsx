@@ -21,12 +21,13 @@ export default function LoginPage() {
       callbackUrl: "/",
       redirect: false,
     });
-    console.log("[login] signIn result:", JSON.stringify(res));
     if (!res) {
       setError("Something went wrong. Try again.");
       setLoading(false);
     } else if (res.error || !res.ok) {
-      setError(`Login failed: ${res.error ?? "unknown error"}`);
+      setError(res.error === "InvalidUsername"
+        ? "Username not found. Ask the admin to add you first."
+        : "Wrong invite code.");
       setLoading(false);
     } else {
       window.location.replace(res.url ?? "/");
@@ -68,7 +69,7 @@ export default function LoginPage() {
         <form onSubmit={handleJoin} className="w-full flex flex-col gap-3">
           <input
             type="text"
-            placeholder="Your display name"
+            placeholder="Your username"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
