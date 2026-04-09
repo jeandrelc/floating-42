@@ -24,7 +24,6 @@ function withCorrectedUrl(req: NextRequest): NextRequest {
     method: req.method,
     headers,
     body: req.body,
-    // @ts-expect-error — duplex is required when body is a ReadableStream
     duplex: "half",
   });
 }
