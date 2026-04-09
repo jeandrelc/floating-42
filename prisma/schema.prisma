@@ -73,9 +73,10 @@ model Song {
   id             String  @id @default(cuid())
   weekId         String
   spotifyTrackId String
-  addedByName    String
-  addedByImage   String?
-  trackName      String?
+  addedByName      String
+  addedBySpotifyId String?
+  addedByImage     String?
+  trackName        String?
   artistNames    String?
   albumImageUrl  String?
   spotifyUrl     String?

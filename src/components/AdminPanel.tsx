@@ -43,6 +43,7 @@ export function AdminPanel({
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
   const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberSpotify, setNewMemberSpotify] = useState("");
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
   function toast(text: string, ok = true) {
@@ -77,12 +78,13 @@ export function AdminPanel({
     const res = await fetch("/api/admin/members", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newMemberName.trim() }),
+      body: JSON.stringify({ name: newMemberName.trim(), spotifyUsername: newMemberSpotify.trim() }),
     });
     const data = await res.json();
     if (res.ok) {
       setUsers((u) => [...u, data.user]);
       setNewMemberName("");
+      setNewMemberSpotify("");
       toast("Member added!");
     } else {
       toast(data.error ?? "Error", false);
@@ -317,23 +319,33 @@ export function AdminPanel({
         </h2>
 
         {/* Add member */}
-        <div className="flex gap-2 mb-4">
-          <input
-            type="text"
-            placeholder="Username"
-            value={newMemberName}
-            onChange={(e) => setNewMemberName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addMember()}
-            className="flex-1 px-3 py-2 rounded-xl bg-[#0f0f1e] border border-[#2a2a45] text-[#f5f0e0] text-sm placeholder:text-[#f5f0e0]/30 focus:outline-none focus:border-[#e8688a]"
-          />
-          <button
-            onClick={addMember}
-            disabled={!newMemberName.trim() || !!loading}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#e8688a]/10 border border-[#e8688a]/30 text-[#e8688a] font-semibold text-sm hover:bg-[#e8688a]/20 transition-colors disabled:opacity-40"
-          >
-            <UserPlus size={14} />
-            Add
-          </button>
+        <div className="flex flex-col gap-2 mb-4">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Display name (for login)"
+              value={newMemberName}
+              onChange={(e) => setNewMemberName(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-xl bg-[#0f0f1e] border border-[#2a2a45] text-[#f5f0e0] text-sm placeholder:text-[#f5f0e0]/30 focus:outline-none focus:border-[#e8688a]"
+            />
+            <input
+              type="text"
+              placeholder="Spotify username (optional)"
+              value={newMemberSpotify}
+              onChange={(e) => setNewMemberSpotify(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addMember()}
+              className="flex-1 px-3 py-2 rounded-xl bg-[#0f0f1e] border border-[#2a2a45] text-[#f5f0e0] text-sm placeholder:text-[#f5f0e0]/30 focus:outline-none focus:border-[#e8688a]"
+            />
+            <button
+              onClick={addMember}
+              disabled={!newMemberName.trim() || !!loading}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#e8688a]/10 border border-[#e8688a]/30 text-[#e8688a] font-semibold text-sm hover:bg-[#e8688a]/20 transition-colors disabled:opacity-40"
+            >
+              <UserPlus size={14} />
+              Add
+            </button>
+          </div>
+          <p className="text-xs text-[#f5f0e0]/30">Spotify username links the member to songs they added on the playlist</p>
         </div>
 
         <div className="space-y-2">

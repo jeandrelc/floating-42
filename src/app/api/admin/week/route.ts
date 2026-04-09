@@ -133,6 +133,7 @@ export async function PATCH(req: NextRequest) {
           weekId,
           spotifyTrackId: t.track.id,
           addedByName,
+          addedBySpotifyId: t.added_by.id,
           addedByImage,
           trackName: t.track.name,
           artistNames: t.track.artists.map((a) => a.name).join(", "),

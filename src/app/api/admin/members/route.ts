@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { name } = await req.json();
+  const { name, spotifyUsername } = await req.json();
   if (!name?.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
@@ -19,7 +19,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Username already exists" }, { status: 409 });
   }
 
-  const user = await prisma.user.create({ data: { name: name.trim() } });
+  const user = await prisma.user.create({
+    data: {
+      name: name.trim(),
+      ...(spotifyUsername?.trim() ? { spotifyId: spotifyUsername.trim() } : {}),
+    },
+  });
   return NextResponse.json({ user });
 }
 

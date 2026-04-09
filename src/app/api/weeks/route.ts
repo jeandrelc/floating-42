@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-// GET /api/weeks - returns current week + its songs with stored track metadata
+
 export async function GET() {
   const week = await prisma.week.findFirst({
     orderBy: { number: "desc" },
@@ -15,8 +14,20 @@ export async function GET() {
     return NextResponse.json({ week: null });
   }
 
+  // Build a map from Spotify user ID → display name for members who have one linked
+  const members = await prisma.user.findMany({
+    where: { spotifyId: { not: null } },
+    select: { spotifyId: true, name: true },
+  });
+  const spotifyToName = Object.fromEntries(
+    members.map((m) => [m.spotifyId!, m.name ?? m.spotifyId!])
+  );
+
   const songsWithMeta = week.songs.map((song) => ({
     ...song,
+    addedByName: (song.addedBySpotifyId && spotifyToName[song.addedBySpotifyId])
+      ? spotifyToName[song.addedBySpotifyId]
+      : song.addedByName,
     track: song.trackName
       ? {
           id: song.spotifyTrackId,
