@@ -169,3 +169,19 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 }
+
+// DELETE /api/admin/week - delete a week and all its songs/votes
+export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  const denied = requireAdmin(session);
+  if (denied) return denied;
+
+  const { weekId } = await req.json();
+  if (!weekId) return NextResponse.json({ error: "Missing weekId" }, { status: 400 });
+
+  await prisma.vote.deleteMany({ where: { weekId } });
+  await prisma.song.deleteMany({ where: { weekId } });
+  await prisma.week.delete({ where: { id: weekId } });
+
+  return NextResponse.json({ ok: true });
+}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Settings, RefreshCw, Vote, Trophy, Plus, Users } from "lucide-react";
+import { Settings, RefreshCw, Vote, Trophy, Plus, Users, Trash2 } from "lucide-react";
 
 interface Song {
   id: string;
@@ -64,6 +64,25 @@ export function AdminPanel({
       setNewEnd("");
       toast("Week created!");
     } else {
+      toast(data.error ?? "Error", false);
+    }
+    setLoading(null);
+  }
+
+  async function deleteWeek() {
+    if (!week) return;
+    if (!confirm(`Delete Week ${week.number} — ${week.theme}? This cannot be undone.`)) return;
+    setLoading("delete");
+    const res = await fetch("/api/admin/week", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ weekId: week.id }),
+    });
+    if (res.ok) {
+      setWeek(null);
+      toast("Week deleted.");
+    } else {
+      const data = await res.json();
       toast(data.error ?? "Error", false);
     }
     setLoading(null);
@@ -210,6 +229,15 @@ export function AdminPanel({
                 Close voting & set winner
               </button>
             )}
+
+            <button
+              onClick={deleteWeek}
+              disabled={!!loading}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#e8688a]/10 border border-[#e8688a]/30 text-[#e8688a] font-semibold text-sm hover:bg-[#e8688a]/20 transition-colors disabled:opacity-40 ml-auto"
+            >
+              <Trash2 size={14} />
+              Delete week
+            </button>
           </div>
 
           {/* Vote breakdown */}
