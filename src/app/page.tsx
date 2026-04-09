@@ -44,8 +44,20 @@ export default async function HomePage() {
     );
   }
 
+  const members = await prisma.user.findMany({
+    where: { spotifyId: { not: null } },
+    select: { spotifyId: true, name: true },
+  });
+  const spotifyToName = Object.fromEntries(
+    members.map((m) => [m.spotifyId!, m.name ?? m.spotifyId!])
+  );
+
   const songsWithMeta = week.songs.map((song) => ({
     ...song,
+    addedByName:
+      song.addedBySpotifyId && spotifyToName[song.addedBySpotifyId]
+        ? spotifyToName[song.addedBySpotifyId]
+        : song.addedByName,
     track: song.trackName
       ? {
           id: song.spotifyTrackId,
