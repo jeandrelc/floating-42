@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AdminPanel } from "@/components/AdminPanel";
 
+//hi
+
 export default async function AdminPage() {
   const session = await auth();
   if (!session) redirect("/login");
