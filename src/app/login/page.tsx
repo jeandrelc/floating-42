@@ -21,11 +21,12 @@ export default function LoginPage() {
       callbackUrl: "/",
       redirect: false,
     });
+    console.log("[login] signIn result:", JSON.stringify(res));
     if (!res) {
       setError("Something went wrong. Try again.");
       setLoading(false);
     } else if (res.error || !res.ok) {
-      setError("Wrong invite code. Ask the group admin for the code.");
+      setError(`Login failed: ${res.error ?? "unknown error"}`);
       setLoading(false);
     } else {
       window.location.replace(res.url ?? "/");
