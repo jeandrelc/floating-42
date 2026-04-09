@@ -10,6 +10,7 @@ interface Song {
   addedByName: string;
   addedBySpotifyId: string | null;
   addedByImage?: string | null;
+  trackName: string | null;
 }
 
 interface Week {
@@ -317,10 +318,15 @@ export function AdminPanel({
                         : "bg-[#0f0f1e]"
                     }`}
                   >
-                    <span className="text-[#f5f0e0]/80 truncate">
-                      {week.winnerId === song.id && "👑 "}
-                      {song.addedByName}
-                    </span>
+                    <div className="truncate">
+                      <span className="text-[#f5f0e0]/80">
+                        {week.winnerId === song.id && "👑 "}
+                        {song.trackName ?? song.spotifyTrackId}
+                      </span>
+                      <span className="text-[#f5f0e0]/40 text-xs ml-2">
+                        by {song.addedByName}
+                      </span>
+                    </div>
                     <span className="font-bold text-[#f4c842] shrink-0 ml-3">
                       {voteCounts[song.id] ?? 0} votes
                     </span>
