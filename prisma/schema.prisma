@@ -60,6 +60,7 @@ model Week {
   id          String   @id @default(cuid())
   number      Int      @unique
   theme       String
+  playlistId  String?
   startDate   DateTime
   endDate     DateTime
   votingOpen  Boolean  @default(false)

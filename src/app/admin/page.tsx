@@ -50,5 +50,12 @@ export default async function AdminPage() {
       }
     : null;
 
-  return <AdminPanel currentWeek={mappedWeek} allUsers={allUsers} />;
+  const playlists = [
+    { label: "Instrumental", id: process.env.SPOTIFY_PLAYLIST_ID ?? "" },
+    { label: "Blue Album Cover", id: process.env.SPOTIFY_PLAYLIST_ID_2 ?? "" },
+    { label: "Holiday", id: process.env.SPOTIFY_PLAYLIST_ID_3 ?? "" },
+    { label: "Beers to Drink Songs To", id: process.env.SPOTIFY_PLAYLIST_ID_4 ?? "" },
+  ].filter((p) => p.id);
+
+  return <AdminPanel currentWeek={mappedWeek} allUsers={allUsers} playlists={playlists} />;
 }

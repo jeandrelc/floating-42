@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Settings, RefreshCw, Vote, Trophy, Plus, Users, Trash2, UserPlus, Pencil, Check, X } from "lucide-react";
 
@@ -31,12 +31,19 @@ interface User {
   isAdmin: boolean;
 }
 
+interface Playlist {
+  id: string;
+  label: string;
+}
+
 export function AdminPanel({
   currentWeek,
   allUsers,
+  playlists,
 }: {
   currentWeek: Week | null;
   allUsers: User[];
+  playlists: Playlist[];
 }) {
   const [week, setWeek] = useState<Week | null>(currentWeek);
   const [users, setUsers] = useState<User[]>(allUsers);
@@ -44,6 +51,14 @@ export function AdminPanel({
   const [newTheme, setNewTheme] = useState("");
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
+  const [newPlaylistId, setNewPlaylistId] = useState("");
+
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+    const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    setNewStart(today);
+    setNewEnd(nextWeek);
+  }, []);
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberSpotify, setNewMemberSpotify] = useState("");
   const [editingSpotify, setEditingSpotify] = useState<string | null>(null); // userId being edited
@@ -61,7 +76,7 @@ export function AdminPanel({
     const res = await fetch("/api/admin/week", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ theme: newTheme, startDate: newStart, endDate: newEnd }),
+      body: JSON.stringify({ theme: newTheme, startDate: newStart, endDate: newEnd, playlistId: newPlaylistId }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -207,6 +222,20 @@ export function AdminPanel({
           <Plus size={18} className="text-[#f5841f]" /> New Week
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          <select
+            value={newPlaylistId}
+            onChange={(e) => {
+              const opt = playlists.find(p => p.id === e.target.value);
+              setNewPlaylistId(e.target.value);
+              if (opt && !newTheme) setNewTheme(opt.label);
+            }}
+            className="sm:col-span-3 px-4 py-2.5 rounded-xl bg-[#0f0f1e] border border-[#2a2a45] text-[#f5f0e0] text-sm focus:outline-none focus:border-[#f5841f]"
+          >
+            <option value="">Select a playlist…</option>
+            {playlists.map((p) => (
+              <option key={p.id} value={p.id}>{p.label}</option>
+            ))}
+          </select>
           <input
             type="text"
             placeholder="Theme (e.g. Blue Album Covers)"
@@ -235,7 +264,7 @@ export function AdminPanel({
           <div className="flex items-end">
             <button
               onClick={createWeek}
-              disabled={!newTheme || !newStart || !newEnd || loading === "create"}
+              disabled={!newTheme || !newStart || !newEnd || !newPlaylistId || loading === "create"}
               className="w-full px-4 py-2.5 rounded-xl bg-[#f5841f] text-white font-bold text-sm hover:bg-[#f9a94e] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {loading === "create" ? "Creating…" : "Create Week"}

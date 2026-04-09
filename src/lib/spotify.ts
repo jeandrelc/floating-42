@@ -37,12 +37,13 @@ export interface PlaylistTrackItem {
   track: SpotifyTrack;
 }
 
-export async function getPlaylistTracks(accessToken?: string): Promise<PlaylistTrackItem[]> {
+export async function getPlaylistTracks(accessToken?: string, playlistId?: string): Promise<PlaylistTrackItem[]> {
   const token = accessToken ?? await getClientToken();
+  const pid = playlistId ?? PLAYLIST_ID;
   const items: PlaylistTrackItem[] = [];
   // Spotify renamed /tracks → /items; the track object is now keyed as "item" not "track"
   let url: string | null =
-    `https://api.spotify.com/v1/playlists/${PLAYLIST_ID}/items?limit=50&fields=next,items(added_at,added_by.id,item(id,name,artists,album,duration_ms,preview_url,external_urls))`;
+    `https://api.spotify.com/v1/playlists/${pid}/items?limit=50&fields=next,items(added_at,added_by.id,item(id,name,artists,album,duration_ms,preview_url,external_urls))`;
 
   while (url) {
     const pageRes = await fetch(url, {

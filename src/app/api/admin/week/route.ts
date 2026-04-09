@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const denied = requireAdmin(session);
   if (denied) return denied;
 
-  const { theme, startDate, endDate } = await req.json();
+  const { theme, startDate, endDate, playlistId } = await req.json();
   if (!theme || !startDate || !endDate) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     data: {
       number,
       theme,
+      playlistId: playlistId || null,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
     },
@@ -98,7 +99,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Pull songs added to the playlist since the week started
-    const tracks = await getPlaylistTracks(accessToken);
+    const tracks = await getPlaylistTracks(accessToken, week.playlistId ?? undefined);
     console.log("[sync] accessToken present:", !!accessToken);
     console.log("[sync] total tracks fetched:", tracks.length);
     console.log("[sync] week.startDate:", week.startDate);
