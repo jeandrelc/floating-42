@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import SpotifyProvider from "next-auth/providers/spotify";
+import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 
@@ -20,6 +21,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   basePath: "/api/auth",
   providers: [
+    Credentials({
+      credentials: {
+        name: { label: "Display Name" },
+        code: { label: "Invite Code" },
+      },
+      async authorize(credentials) {
+        const code = credentials.code as string;
+        const name = (credentials.name as string)?.trim();
+        if (!code || !name) return null;
+        if (code !== process.env.INVITE_CODE) return null;
+
+        let user = await prisma.user.findFirst({ where: { name } });
+        if (!user) {
+          user = await prisma.user.create({ data: { name } });
+        }
+        return user;
+      },
+    }),
     SpotifyProvider({
       clientId: process.env.SPOTIFY_CLIENT_ID!,
       clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
