@@ -21,11 +21,14 @@ export default function LoginPage() {
       callbackUrl: "/",
       redirect: false,
     });
-    if (res?.error) {
+    if (!res) {
+      setError("Something went wrong. Try again.");
+      setLoading(false);
+    } else if (res.error || !res.ok) {
       setError("Wrong invite code. Ask the group admin for the code.");
       setLoading(false);
     } else {
-      window.location.href = res?.url ?? "/";
+      window.location.replace(res.url ?? "/");
     }
   }
 
