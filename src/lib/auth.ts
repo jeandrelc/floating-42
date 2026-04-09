@@ -13,6 +13,11 @@ const SPOTIFY_SCOPES = [
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   trustHost: true,
+  logger: {
+    error: (e) => console.error("[NextAuth] error:", e),
+    warn: (code) => console.warn("[NextAuth] warn:", code),
+    debug: (msg, meta) => console.log("[NextAuth] debug:", msg, JSON.stringify(meta)),
+  },
   basePath: "/api/auth",
   providers: [
     SpotifyProvider({
