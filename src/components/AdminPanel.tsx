@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Settings, RefreshCw, Vote, Trophy, Plus, Users, Trash2, UserPlus } from "lucide-react";
+import { Settings, RefreshCw, Vote, Trophy, Plus, Users, Trash2, UserPlus, Pencil, Check, X } from "lucide-react";
 
 interface Song {
   id: string;
   spotifyTrackId: string;
   addedByName: string;
+  addedBySpotifyId: string | null;
   addedByImage?: string | null;
 }
 
@@ -44,6 +45,8 @@ export function AdminPanel({
   const [newEnd, setNewEnd] = useState("");
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberSpotify, setNewMemberSpotify] = useState("");
+  const [editingSpotify, setEditingSpotify] = useState<string | null>(null); // userId being edited
+  const [editingSpotifyValue, setEditingSpotifyValue] = useState("");
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
   function toast(text: string, ok = true) {
@@ -90,6 +93,22 @@ export function AdminPanel({
       toast(data.error ?? "Error", false);
     }
     setLoading(null);
+  }
+
+  async function saveSpotifyId(userId: string) {
+    const res = await fetch("/api/admin/members", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, spotifyId: editingSpotifyValue }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setUsers((u) => u.map((m) => m.id === userId ? { ...m, spotifyId: data.user.spotifyId } : m));
+      toast("Spotify ID saved!");
+    } else {
+      toast(data.error ?? "Error", false);
+    }
+    setEditingSpotify(null);
   }
 
   async function removeMember(userId: string) {
@@ -348,42 +367,73 @@ export function AdminPanel({
           <p className="text-xs text-[#f5f0e0]/30">Spotify username links the member to songs they added on the playlist</p>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           {users.map((user) => (
-            <div
-              key={user.id}
-              className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[#0f0f1e] transition-colors group"
-            >
-              {user.image ? (
-                <Image
-                  src={user.image}
-                  alt={user.name ?? ""}
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-[#2a2a45] flex items-center justify-center text-xs font-bold">
-                  {user.name?.[0]?.toUpperCase() ?? "?"}
+            <div key={user.id} className="px-3 py-2 rounded-xl hover:bg-[#0f0f1e] transition-colors group">
+              <div className="flex items-center gap-3">
+                {user.image ? (
+                  <Image src={user.image} alt={user.name ?? ""} width={32} height={32} className="rounded-full" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-[#2a2a45] flex items-center justify-center text-xs font-bold shrink-0">
+                    {user.name?.[0]?.toUpperCase() ?? "?"}
+                  </div>
+                )}
+                <span className="text-sm text-[#f5f0e0]/80">{user.name}</span>
+                {user.isAdmin ? (
+                  <span className="ml-auto text-xs px-2 py-0.5 rounded-lg bg-[#a259c4]/10 text-[#a259c4] border border-[#a259c4]/20">admin</span>
+                ) : (
+                  <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    <button
+                      onClick={() => { setEditingSpotify(user.id); setEditingSpotifyValue(user.spotifyId ?? ""); }}
+                      className="text-[#f5f0e0]/30 hover:text-[#4ecdc4]"
+                      title="Set Spotify ID"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button onClick={() => removeMember(user.id)} disabled={!!loading} className="text-[#f5f0e0]/30 hover:text-[#e8688a]">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+              {/* Spotify ID row */}
+              {editingSpotify === user.id ? (
+                <div className="flex items-center gap-2 mt-1.5 ml-11">
+                  <input
+                    autoFocus
+                    type="text"
+                    value={editingSpotifyValue}
+                    onChange={(e) => setEditingSpotifyValue(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") saveSpotifyId(user.id); if (e.key === "Escape") setEditingSpotify(null); }}
+                    placeholder="Paste Spotify ID"
+                    className="flex-1 px-2 py-1 rounded-lg bg-[#0f0f1e] border border-[#4ecdc4]/40 text-[#f5f0e0] text-xs focus:outline-none"
+                  />
+                  <button onClick={() => saveSpotifyId(user.id)} className="text-[#4ecdc4]"><Check size={14} /></button>
+                  <button onClick={() => setEditingSpotify(null)} className="text-[#f5f0e0]/30"><X size={14} /></button>
                 </div>
-              )}
-              <span className="text-sm text-[#f5f0e0]/80">{user.name}</span>
-              {user.isAdmin ? (
-                <span className="ml-auto text-xs px-2 py-0.5 rounded-lg bg-[#a259c4]/10 text-[#a259c4] border border-[#a259c4]/20">
-                  admin
-                </span>
-              ) : (
-                <button
-                  onClick={() => removeMember(user.id)}
-                  disabled={!!loading}
-                  className="ml-auto opacity-0 group-hover:opacity-100 text-[#f5f0e0]/30 hover:text-[#e8688a] transition-all disabled:opacity-20"
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
+              ) : user.spotifyId ? (
+                <p className="text-xs text-[#f5f0e0]/25 ml-11 mt-0.5 font-mono truncate">{user.spotifyId}</p>
+              ) : null}
             </div>
           ))}
         </div>
+
+        {/* Unmatched Spotify IDs from songs */}
+        {week && week.songs.length > 0 && (() => {
+          const mappedIds = new Set(users.map(u => u.spotifyId).filter(Boolean));
+          const unmatched = [...new Set(week.songs.map(s => s.addedBySpotifyId).filter((id): id is string => !!id && !mappedIds.has(id)))];
+          if (!unmatched.length) return null;
+          return (
+            <div className="mt-4 p-3 rounded-xl bg-[#0f0f1e] border border-[#2a2a45]">
+              <p className="text-xs font-semibold text-[#f5f0e0]/40 uppercase tracking-wider mb-2">Unmatched song IDs</p>
+              <div className="space-y-1">
+                {unmatched.map(id => (
+                  <p key={id} className="text-xs font-mono text-[#f5f0e0]/50 select-all">{id}</p>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </section>
     </div>
   );

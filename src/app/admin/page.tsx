@@ -13,7 +13,7 @@ export default async function AdminPage() {
   const week = await prisma.week.findFirst({
     orderBy: { number: "desc" },
     include: {
-      songs: true,
+      songs: { select: { id: true, spotifyTrackId: true, addedByName: true, addedBySpotifyId: true, addedByImage: true } },
       votes: { select: { songId: true } },
     },
   });

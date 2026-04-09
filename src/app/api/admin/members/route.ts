@@ -48,6 +48,24 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ user });
 }
 
+// PATCH /api/admin/members - update a member's Spotify ID
+export async function PATCH(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user.isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { userId, spotifyId } = await req.json();
+  if (!userId) return NextResponse.json({ error: "userId is required" }, { status: 400 });
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { spotifyId: spotifyId?.trim() || null },
+  });
+
+  return NextResponse.json({ user });
+}
+
 // DELETE /api/admin/members - remove a member
 export async function DELETE(req: NextRequest) {
   const session = await auth();
