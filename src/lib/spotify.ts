@@ -52,11 +52,13 @@ export async function getPlaylistTracks(accessToken?: string, playlistId?: strin
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pageData: any = await pageRes.json();
-    if (!pageRes.ok || !Array.isArray(pageData.items)) {
+    if (!pageRes.ok) {
       throw new Error(`Spotify API error ${pageRes.status}: ${pageData?.error?.message ?? JSON.stringify(pageData)}`);
     }
+    // Spotify returns {} instead of [] for empty playlists
+    const rawItems = Array.isArray(pageData.items) ? pageData.items : [];
     // Normalize "item" → "track" so the rest of the app is unchanged
-    const normalized = pageData.items.map((i: any) => ({
+    const normalized = rawItems.map((i: any) => ({
       ...i,
       track: i.item ?? i.track,
     }));
