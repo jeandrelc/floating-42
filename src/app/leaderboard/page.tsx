@@ -24,19 +24,34 @@ export default async function LeaderboardPage() {
     orderBy: { number: "desc" },
   });
 
+  // Build Spotify ID → display name map
+  const members = await prisma.user.findMany({
+    where: { spotifyId: { not: null } },
+    select: { spotifyId: true, name: true },
+  });
+  const spotifyToName = Object.fromEntries(
+    members.map((m) => [m.spotifyId!, m.name ?? m.spotifyId!])
+  );
+
+  function resolveName(song: { addedByName: string; addedBySpotifyId: string | null }) {
+    return (song.addedBySpotifyId && spotifyToName[song.addedBySpotifyId])
+      ? spotifyToName[song.addedBySpotifyId]
+      : song.addedByName;
+  }
+
   // Build per-person win count
   const winsByPerson = new Map<string, { name: string; image?: string | null; wins: number }>();
 
   for (const week of weeks) {
     const winningSong = week.songs.find((s) => s.id === week.winnerId);
     if (!winningSong) continue;
-    const key = winningSong.addedByName;
+    const key = resolveName(winningSong);
     const existing = winsByPerson.get(key);
     if (existing) {
       existing.wins++;
     } else {
       winsByPerson.set(key, {
-        name: winningSong.addedByName,
+        name: key,
         image: winningSong.addedByImage,
         wins: 1,
       });
@@ -159,7 +174,7 @@ export default async function LeaderboardPage() {
                   <p className="text-xs text-[#f5f0e0]/60 truncate">
                     {track?.artists.map((a) => a.name).join(", ")} ·{" "}
                     <span className="text-[#f5841f]">
-                      {winningSong?.addedByName}
+                      {winningSong ? resolveName(winningSong) : ""}
                     </span>
                   </p>
                 </div>
