@@ -99,7 +99,12 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Pull songs added to the playlist since the week started
-    const tracks = await getPlaylistTracks(accessToken, week.playlistId ?? undefined);
+    let tracks;
+    try {
+      tracks = await getPlaylistTracks(accessToken, week.playlistId ?? undefined);
+    } catch (e: any) {
+      return NextResponse.json({ error: e.message ?? "Failed to fetch playlist" }, { status: 502 });
+    }
     console.log("[sync] accessToken present:", !!accessToken);
     console.log("[sync] total tracks fetched:", tracks.length);
     console.log("[sync] week.startDate:", week.startDate);

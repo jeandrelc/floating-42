@@ -52,6 +52,9 @@ export async function getPlaylistTracks(accessToken?: string, playlistId?: strin
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pageData: any = await pageRes.json();
+    if (!pageRes.ok) {
+      throw new Error(`Spotify API error ${pageRes.status}: ${pageData?.error?.message ?? JSON.stringify(pageData)}`);
+    }
     // Normalize "item" → "track" so the rest of the app is unchanged
     const normalized = (pageData.items ?? []).map((i: any) => ({
       ...i,
