@@ -19,10 +19,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Username already exists" }, { status: 409 });
   }
 
+  // Resolve Spotify vanity username → internal user ID
+  let spotifyId: string | undefined;
+  if (spotifyUsername?.trim()) {
+    const adminAccount = await prisma.account.findFirst({
+      where: { user: { isAdmin: true }, provider: "spotify" },
+    });
+    if (adminAccount?.access_token) {
+      const profileRes = await fetch(
+        `https://api.spotify.com/v1/users/${encodeURIComponent(spotifyUsername.trim())}`,
+        { headers: { Authorization: `Bearer ${adminAccount.access_token}` } }
+      );
+      if (profileRes.ok) {
+        const profile = await profileRes.json();
+        spotifyId = profile.id;
+      }
+    }
+    // Fallback: store whatever was entered if we couldn't resolve it
+    if (!spotifyId) spotifyId = spotifyUsername.trim();
+  }
+
   const user = await prisma.user.create({
     data: {
       name: name.trim(),
-      ...(spotifyUsername?.trim() ? { spotifyId: spotifyUsername.trim() } : {}),
+      ...(spotifyId ? { spotifyId } : {}),
     },
   });
   return NextResponse.json({ user });
