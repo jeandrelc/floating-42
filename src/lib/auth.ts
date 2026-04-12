@@ -51,9 +51,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id;
       }
       if (account?.provider === "spotify" && account.providerAccountId) {
-        const isAdmin =
-          !!process.env.ADMIN_SPOTIFY_ID &&
-          account.providerAccountId === process.env.ADMIN_SPOTIFY_ID;
+        const adminIds = (process.env.ADMIN_SPOTIFY_IDS ?? process.env.ADMIN_SPOTIFY_ID ?? "")
+          .split(",")
+          .map((id) => id.trim())
+          .filter(Boolean);
+        const isAdmin = adminIds.includes(account.providerAccountId);
         await prisma.user.updateMany({
           where: { id: user!.id! },
           data: {

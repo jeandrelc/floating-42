@@ -4,6 +4,14 @@ import Image from "next/image";
 import { Music, ExternalLink, CheckCircle2 } from "lucide-react";
 import type { SpotifyTrack } from "@/lib/spotify";
 
+export interface AudioFeatures {
+  energy: number;
+  danceability: number;
+  valence: number;
+  tempo: number;
+  acousticness: number;
+}
+
 interface SongCardProps {
   song: {
     id: string;
@@ -11,6 +19,7 @@ interface SongCardProps {
     addedByImage?: string | null;
     track: SpotifyTrack | null;
     voteCount?: number;
+    audioFeatures?: AudioFeatures | null;
   };
   isWinner?: boolean;
   isVoted?: boolean;
@@ -36,6 +45,20 @@ function colourForName(name: string) {
   return ACCENT_COLOURS[Math.abs(hash) % ACCENT_COLOURS.length];
 }
 
+function FeatureBar({ label, value, color, title }: { label: string; value: number; color: string; title: string }) {
+  return (
+    <div className="flex items-center gap-1" title={`${title}: ${Math.round(value * 100)}%`}>
+      <span className="text-[10px] leading-none">{label}</span>
+      <div className="w-10 h-1 rounded-full bg-white/10">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${value * 100}%`, background: color }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function SongCard({
   song,
   isWinner = false,
@@ -45,7 +68,7 @@ export function SongCard({
   onVote,
   disabled = false,
 }: SongCardProps) {
-  const { track, addedByName, voteCount } = song;
+  const { track, addedByName, voteCount, audioFeatures } = song;
   const accent = colourForName(addedByName);
   const albumArt = track?.album.images[0]?.url;
 
@@ -133,6 +156,18 @@ export function SongCard({
               {addedByName}
             </span>
           </div>
+
+          {/* Audio features */}
+          {audioFeatures && (
+            <div className="flex items-center gap-2.5 mt-2.5">
+              <FeatureBar label="⚡" value={audioFeatures.energy} color="#f5841f" title="Energy" />
+              <FeatureBar label="😊" value={audioFeatures.valence} color="#4ecdc4" title="Vibe" />
+              <FeatureBar label="💃" value={audioFeatures.danceability} color="#a259c4" title="Dance" />
+              <span className="ml-auto text-[10px] font-mono text-[#f5f0e0]/40">
+                {Math.round(audioFeatures.tempo)} bpm
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

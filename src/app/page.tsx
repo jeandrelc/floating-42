@@ -69,8 +69,22 @@ export default async function HomePage() {
           external_urls: { spotify: song.spotifyUrl ?? "" },
         }
       : null,
+    audioFeatures: song.energy != null
+      ? { energy: song.energy, danceability: song.danceability!, valence: song.valence!, tempo: song.tempo!, acousticness: song.acousticness! }
+      : null,
     voteCount: week.votes.filter((v) => v.songId === song.id).length,
   }));
+
+  // Aggregate vibe for songs that have features
+  const songsWithFeatures = songsWithMeta.filter((s) => s.audioFeatures);
+  const weekVibe = songsWithFeatures.length > 0
+    ? {
+        energy: songsWithFeatures.reduce((sum, s) => sum + s.audioFeatures!.energy, 0) / songsWithFeatures.length,
+        valence: songsWithFeatures.reduce((sum, s) => sum + s.audioFeatures!.valence, 0) / songsWithFeatures.length,
+        danceability: songsWithFeatures.reduce((sum, s) => sum + s.audioFeatures!.danceability, 0) / songsWithFeatures.length,
+        tempo: songsWithFeatures.reduce((sum, s) => sum + s.audioFeatures!.tempo, 0) / songsWithFeatures.length,
+      }
+    : null;
 
   const deadline = new Date(week.endDate);
   const isOver = deadline < new Date();
@@ -126,6 +140,24 @@ export default async function HomePage() {
         </div>
       </div>
 
+      {/* Week vibe summary */}
+      {weekVibe && (
+        <div className="mb-8 rounded-2xl border border-[#2a2a45] bg-[#16162a] p-5">
+          <p className="text-xs font-bold uppercase tracking-widest text-[#f5f0e0]/40 mb-3">
+            This Week&apos;s Vibe
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <VibeStat label="⚡ Energy" value={weekVibe.energy} color="#f5841f" />
+            <VibeStat label="😊 Positivity" value={weekVibe.valence} color="#4ecdc4" />
+            <VibeStat label="💃 Danceability" value={weekVibe.danceability} color="#a259c4" />
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] text-[#f5f0e0]/50">🎵 Avg BPM</span>
+              <span className="text-xl font-bold text-[#f4c842]">{Math.round(weekVibe.tempo)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Songs */}
       <h2
         className="text-2xl font-bold mb-5"
@@ -151,6 +183,18 @@ export default async function HomePage() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function VibeStat({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[11px] text-[#f5f0e0]/50">{label}</span>
+      <div className="h-1.5 w-full rounded-full bg-white/10">
+        <div className="h-full rounded-full" style={{ width: `${value * 100}%`, background: color }} />
+      </div>
+      <span className="text-xs font-semibold" style={{ color }}>{Math.round(value * 100)}%</span>
     </div>
   );
 }

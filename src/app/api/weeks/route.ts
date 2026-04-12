@@ -39,6 +39,9 @@ export async function GET() {
           external_urls: { spotify: song.spotifyUrl ?? "" },
         }
       : null,
+    audioFeatures: (song.energy != null)
+      ? { energy: song.energy, danceability: song.danceability!, valence: song.valence!, tempo: song.tempo!, acousticness: song.acousticness! }
+      : null,
     voteCount: week.votes.filter((v) => v.songId === song.id).length,
   }));
 

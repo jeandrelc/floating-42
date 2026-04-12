@@ -81,6 +81,11 @@ model Song {
   artistNames    String?
   albumImageUrl  String?
   spotifyUrl     String?
+  energy         Float?
+  danceability   Float?
+  valence        Float?
+  tempo          Float?
+  acousticness   Float?
 
   week  Week   @relation(fields: [weekId], references: [id])
   votes Vote[]

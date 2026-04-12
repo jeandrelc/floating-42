@@ -39,7 +39,8 @@ export interface PlaylistTrackItem {
 
 export async function getPlaylistTracks(accessToken?: string, playlistId?: string): Promise<PlaylistTrackItem[]> {
   const token = accessToken ?? await getClientToken();
-  const pid = playlistId ?? PLAYLIST_ID;
+  // Strip any ?si= or other query params people paste from Spotify share links
+  const pid = (playlistId ?? PLAYLIST_ID).split("?")[0];
   const items: PlaylistTrackItem[] = [];
   // Spotify renamed /tracks → /items; the track object is now keyed as "item" not "track"
   let url: string | null =
@@ -67,6 +68,51 @@ export async function getPlaylistTracks(accessToken?: string, playlistId?: strin
   }
 
   return items.filter((i) => i.track);
+}
+
+export interface AudioFeatures {
+  id: string;
+  energy: number;
+  danceability: number;
+  valence: number;
+  tempo: number;
+  acousticness: number;
+  instrumentalness: number;
+}
+
+export async function getAudioFeatures(trackIds: string[]): Promise<Map<string, AudioFeatures>> {
+  const token = await getClientToken();
+  const result = new Map<string, AudioFeatures>();
+  // Spotify allows up to 100 IDs per request
+  for (let i = 0; i < trackIds.length; i += 100) {
+    const chunk = trackIds.slice(i, i + 100);
+    const res = await fetch(
+      `https://api.spotify.com/v1/audio-features?ids=${chunk.join(",")}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        next: { revalidate: 86400 },
+      }
+    );
+    const data = await res.json();
+    for (const f of data.audio_features ?? []) {
+      if (f?.id) result.set(f.id, f);
+    }
+  }
+  return result;
+}
+
+export async function getRecommendations(seedTrackIds: string[], limit = 5): Promise<SpotifyTrack[]> {
+  const token = await getClientToken();
+  const seeds = seedTrackIds.slice(0, 5).join(",");
+  const res = await fetch(
+    `https://api.spotify.com/v1/recommendations?seed_tracks=${seeds}&limit=${limit}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      next: { revalidate: 3600 },
+    }
+  );
+  const data = await res.json();
+  return data.tracks ?? [];
 }
 
 export async function getTrack(trackId: string): Promise<SpotifyTrack> {

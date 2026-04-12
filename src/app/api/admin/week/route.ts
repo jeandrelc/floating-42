@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getPlaylistTracks, getUserProfile } from "@/lib/spotify";
+import { getPlaylistTracks, getUserProfile, getAudioFeatures } from "@/lib/spotify";
 import type { Session } from "next-auth";
 
 function requireAdmin(session: Session | null) {
@@ -148,6 +148,32 @@ export async function PATCH(req: NextRequest) {
         },
         update: {},
       });
+    }
+
+    // Fetch audio features for all songs in the week that don't have them yet
+    const songsNeedingFeatures = await prisma.song.findMany({
+      where: { weekId, energy: null },
+      select: { id: true, spotifyTrackId: true },
+    });
+    if (songsNeedingFeatures.length > 0) {
+      const featuresMap = await getAudioFeatures(
+        songsNeedingFeatures.map((s) => s.spotifyTrackId)
+      );
+      for (const song of songsNeedingFeatures) {
+        const f = featuresMap.get(song.spotifyTrackId);
+        if (f) {
+          await prisma.song.update({
+            where: { id: song.id },
+            data: {
+              energy: f.energy,
+              danceability: f.danceability,
+              valence: f.valence,
+              tempo: f.tempo,
+              acousticness: f.acousticness,
+            },
+          });
+        }
+      }
     }
 
     const synced = await prisma.song.count({ where: { weekId } });
