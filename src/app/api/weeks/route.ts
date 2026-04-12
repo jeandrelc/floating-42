@@ -43,6 +43,9 @@ export async function GET() {
       ? { energy: song.energy, danceability: song.danceability!, valence: song.valence!, tempo: song.tempo!, acousticness: song.acousticness! }
       : null,
     tags: song.tags ? JSON.parse(song.tags) : null,
+    listeners: song.listeners ?? null,
+    wikiSummary: song.wikiSummary ?? null,
+    artistBio: song.artistBio ?? null,
     voteCount: week.votes.filter((v) => v.songId === song.id).length,
   }));
 

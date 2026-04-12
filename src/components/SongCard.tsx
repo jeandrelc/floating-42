@@ -21,6 +21,9 @@ interface SongCardProps {
     voteCount?: number;
     audioFeatures?: AudioFeatures | null;
     tags?: string[] | null;
+    listeners?: number | null;
+    wikiSummary?: string | null;
+    artistBio?: string | null;
   };
   isWinner?: boolean;
   isVoted?: boolean;
@@ -46,6 +49,19 @@ function colourForName(name: string) {
   return ACCENT_COLOURS[Math.abs(hash) % ACCENT_COLOURS.length];
 }
 
+function formatListeners(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+  return String(n);
+}
+
+function listenerTier(n: number): { label: string; color: string } {
+  if (n >= 1_000_000) return { label: "popular", color: "#f4c842" };
+  if (n >= 100_000)   return { label: "known",   color: "#f5841f" };
+  if (n >= 10_000)    return { label: "indie",   color: "#4ecdc4" };
+  return                     { label: "obscure", color: "#a259c4" };
+}
+
 function FeatureBar({ label, value, color, title }: { label: string; value: number; color: string; title: string }) {
   return (
     <div className="flex items-center gap-1" title={`${title}: ${Math.round(value * 100)}%`}>
@@ -69,7 +85,7 @@ export function SongCard({
   onVote,
   disabled = false,
 }: SongCardProps) {
-  const { track, addedByName, voteCount, audioFeatures, tags } = song;
+  const { track, addedByName, voteCount, audioFeatures, tags, listeners, wikiSummary, artistBio } = song;
   const accent = colourForName(addedByName);
   const albumArt = track?.album.images[0]?.url;
 
@@ -122,6 +138,11 @@ export function SongCard({
               <p className="text-[#f5f0e0]/60 text-xs truncate mt-0.5">
                 {track?.artists.map((a) => a.name).join(", ") ?? "Unknown artist"}
               </p>
+              {artistBio && (
+                <p className="text-[#f5f0e0]/35 text-[10px] leading-tight mt-0.5 line-clamp-2">
+                  {artistBio}
+                </p>
+              )}
             </div>
             {track && (
               <a
@@ -157,6 +178,29 @@ export function SongCard({
               {addedByName}
             </span>
           </div>
+
+          {/* Listeners badge + wiki blurb */}
+          {(listeners != null || wikiSummary) && (
+            <div className="mt-2 flex items-start gap-2">
+              {listeners != null && (() => {
+                const tier = listenerTier(listeners);
+                return (
+                  <span
+                    className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap"
+                    style={{ background: `${tier.color}22`, color: tier.color }}
+                    title={`${listeners.toLocaleString()} listeners on Last.fm`}
+                  >
+                    {formatListeners(listeners)} listeners
+                  </span>
+                );
+              })()}
+              {wikiSummary && (
+                <p className="text-[10px] text-[#f5f0e0]/35 leading-tight line-clamp-2">
+                  {wikiSummary}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Genre tags */}
           {tags && tags.length > 0 && (

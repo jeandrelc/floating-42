@@ -81,6 +81,50 @@ export async function getArtistTopTracks(
   }));
 }
 
+/** Strip Last.fm HTML links and [read more] noise from bio/wiki text, return first sentence */
+function cleanSummary(raw: string | undefined): string | null {
+  if (!raw) return null;
+  const stripped = raw
+    .replace(/<a\b[^>]*>.*?<\/a>/gi, "") // remove <a> tags
+    .replace(/<[^>]+>/g, "")             // remove remaining HTML
+    .replace(/\s+/g, " ")
+    .trim();
+  // Take first sentence only
+  const firstPeriod = stripped.search(/[.!?]/);
+  return firstPeriod > 0 ? stripped.slice(0, firstPeriod + 1).trim() : stripped.slice(0, 200).trim() || null;
+}
+
+export async function getTrackInfo(
+  artist: string,
+  track: string
+): Promise<{ listeners: number; wikiSummary: string | null } | null> {
+  const res = await fetch(
+    buildUrl({ method: "track.getInfo", artist, track }),
+    { next: { revalidate: 86400 } }
+  );
+  const data = await res.json();
+  if (data.error || !data.track) return null;
+  return {
+    listeners: parseInt(data.track.listeners ?? "0", 10),
+    wikiSummary: cleanSummary(data.track.wiki?.summary),
+  };
+}
+
+export async function getArtistInfo(
+  artist: string
+): Promise<{ listeners: number; bio: string | null } | null> {
+  const res = await fetch(
+    buildUrl({ method: "artist.getInfo", artist }),
+    { next: { revalidate: 86400 } }
+  );
+  const data = await res.json();
+  if (data.error || !data.artist) return null;
+  return {
+    listeners: parseInt(data.artist.stats?.listeners ?? "0", 10),
+    bio: cleanSummary(data.artist.bio?.summary),
+  };
+}
+
 export async function getTopTags(
   artist: string,
   track: string,

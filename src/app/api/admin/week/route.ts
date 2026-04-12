@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getPlaylistTracks, getUserProfile, getAudioFeatures } from "@/lib/spotify";
-import { getTopTags } from "@/lib/lastfm";
+import { getTopTags, getTrackInfo, getArtistInfo } from "@/lib/lastfm";
 import type { Session } from "next-auth";
 
 function requireAdmin(session: Session | null) {
@@ -175,6 +175,34 @@ export async function PATCH(req: NextRequest) {
           });
         }
       }
+    }
+
+    // Fetch Last.fm track info + artist info for songs missing them
+    const songsNeedingInfo = await prisma.song.findMany({
+      where: { weekId, listeners: null, trackName: { not: null } },
+      select: { id: true, trackName: true, artistNames: true },
+    });
+    // Deduplicate artists to avoid redundant API calls
+    const artistInfoCache = new Map<string, { listeners: number; bio: string | null } | null>();
+    for (const song of songsNeedingInfo) {
+      const artist = song.artistNames?.split(", ")[0] ?? "";
+      if (!artist || !song.trackName) continue;
+      try {
+        const [trackInfo, artistInfo] = await Promise.all([
+          getTrackInfo(artist, song.trackName),
+          artistInfoCache.has(artist)
+            ? Promise.resolve(artistInfoCache.get(artist)!)
+            : getArtistInfo(artist).then((info) => { artistInfoCache.set(artist, info); return info; }),
+        ]);
+        await prisma.song.update({
+          where: { id: song.id },
+          data: {
+            listeners: trackInfo?.listeners ?? null,
+            wikiSummary: trackInfo?.wikiSummary ?? null,
+            artistBio: artistInfo?.bio ?? null,
+          },
+        });
+      } catch {}
     }
 
     // Fetch Last.fm tags for songs that don't have them yet

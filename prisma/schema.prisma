@@ -87,6 +87,9 @@ model Song {
   tempo          Float?
   acousticness   Float?
   tags           String?
+  listeners      Int?
+  wikiSummary    String?
+  artistBio      String?
 
   week  Week   @relation(fields: [weekId], references: [id])
   votes Vote[]
