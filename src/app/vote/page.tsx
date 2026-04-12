@@ -211,9 +211,11 @@ export default function VotePage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-[#f5f0e0] truncate">{track.name}</p>
                       <p className="text-xs text-[#f5f0e0]/50 truncate">{track.artist.name}</p>
-                      <p className="text-[10px] text-[#f5f0e0]/30 mt-0.5">
-                        {Math.round(track.match * 100)}% match
-                      </p>
+                      {track.match > 0 && (
+                        <p className="text-[10px] text-[#f5f0e0]/30 mt-0.5">
+                          {Math.round(track.match * 100)}% match
+                        </p>
+                      )}
                     </div>
                     <ExternalLink size={14} className="shrink-0 text-[#f5f0e0]/20 group-hover:text-[#d51007] transition-colors" />
                   </a>
