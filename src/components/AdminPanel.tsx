@@ -401,7 +401,7 @@ export function AdminPanel({
         </h2>
 
         <div className="flex flex-col gap-2 mb-4">
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
               placeholder="Display name (for login)"
