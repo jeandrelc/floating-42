@@ -94,6 +94,7 @@ export async function getAudioFeatures(trackIds: string[]): Promise<Map<string, 
       }
     );
     const data = await res.json();
+    console.log("[audio-features] status:", res.status, "keys:", Object.keys(data));
     for (const f of data.audio_features ?? []) {
       if (f?.id) result.set(f.id, f);
     }
