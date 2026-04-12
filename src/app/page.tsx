@@ -72,19 +72,21 @@ export default async function HomePage() {
     audioFeatures: song.energy != null
       ? { energy: song.energy, danceability: song.danceability!, valence: song.valence!, tempo: song.tempo!, acousticness: song.acousticness! }
       : null,
+    tags: song.tags ? (JSON.parse(song.tags) as string[]) : null,
     voteCount: week.votes.filter((v) => v.songId === song.id).length,
   }));
 
-  // Aggregate vibe for songs that have features
-  const songsWithFeatures = songsWithMeta.filter((s) => s.audioFeatures);
-  const weekVibe = songsWithFeatures.length > 0
-    ? {
-        energy: songsWithFeatures.reduce((sum, s) => sum + s.audioFeatures!.energy, 0) / songsWithFeatures.length,
-        valence: songsWithFeatures.reduce((sum, s) => sum + s.audioFeatures!.valence, 0) / songsWithFeatures.length,
-        danceability: songsWithFeatures.reduce((sum, s) => sum + s.audioFeatures!.danceability, 0) / songsWithFeatures.length,
-        tempo: songsWithFeatures.reduce((sum, s) => sum + s.audioFeatures!.tempo, 0) / songsWithFeatures.length,
-      }
-    : null;
+  // Aggregate genre tags across the week
+  const tagCounts = new Map<string, number>();
+  for (const song of songsWithMeta) {
+    for (const tag of song.tags ?? []) {
+      tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+    }
+  }
+  const topTags = [...tagCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([tag]) => tag);
 
   const deadline = new Date(week.endDate);
   const isOver = deadline < new Date();
@@ -140,20 +142,26 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* Week vibe summary */}
-      {weekVibe && (
+      {/* Week vibe — genre tag cloud */}
+      {topTags.length > 0 && (
         <div className="mb-8 rounded-2xl border border-[#2a2a45] bg-[#16162a] p-5">
           <p className="text-xs font-bold uppercase tracking-widest text-[#f5f0e0]/40 mb-3">
             This Week&apos;s Vibe
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <VibeStat label="⚡ Energy" value={weekVibe.energy} color="#f5841f" />
-            <VibeStat label="😊 Positivity" value={weekVibe.valence} color="#4ecdc4" />
-            <VibeStat label="💃 Danceability" value={weekVibe.danceability} color="#a259c4" />
-            <div className="flex flex-col gap-1">
-              <span className="text-[11px] text-[#f5f0e0]/50">🎵 Avg BPM</span>
-              <span className="text-xl font-bold text-[#f4c842]">{Math.round(weekVibe.tempo)}</span>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {topTags.map((tag, i) => {
+              const colors = ["#f5841f", "#4ecdc4", "#a259c4", "#e8688a", "#f4c842", "#f5841f", "#4ecdc4", "#a259c4"];
+              const color = colors[i % colors.length];
+              return (
+                <span
+                  key={tag}
+                  className="px-3 py-1 rounded-full text-sm font-semibold capitalize"
+                  style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}
+                >
+                  {tag}
+                </span>
+              );
+            })}
           </div>
         </div>
       )}
@@ -187,14 +195,3 @@ export default async function HomePage() {
   );
 }
 
-function VibeStat({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-[11px] text-[#f5f0e0]/50">{label}</span>
-      <div className="h-1.5 w-full rounded-full bg-white/10">
-        <div className="h-full rounded-full" style={{ width: `${value * 100}%`, background: color }} />
-      </div>
-      <span className="text-xs font-semibold" style={{ color }}>{Math.round(value * 100)}%</span>
-    </div>
-  );
-}

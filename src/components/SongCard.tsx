@@ -20,6 +20,7 @@ interface SongCardProps {
     track: SpotifyTrack | null;
     voteCount?: number;
     audioFeatures?: AudioFeatures | null;
+    tags?: string[] | null;
   };
   isWinner?: boolean;
   isVoted?: boolean;
@@ -68,7 +69,7 @@ export function SongCard({
   onVote,
   disabled = false,
 }: SongCardProps) {
-  const { track, addedByName, voteCount, audioFeatures } = song;
+  const { track, addedByName, voteCount, audioFeatures, tags } = song;
   const accent = colourForName(addedByName);
   const albumArt = track?.album.images[0]?.url;
 
@@ -157,15 +158,18 @@ export function SongCard({
             </span>
           </div>
 
-          {/* Audio features */}
-          {audioFeatures && (
-            <div className="flex items-center gap-2.5 mt-2.5">
-              <FeatureBar label="⚡" value={audioFeatures.energy} color="#f5841f" title="Energy" />
-              <FeatureBar label="😊" value={audioFeatures.valence} color="#4ecdc4" title="Vibe" />
-              <FeatureBar label="💃" value={audioFeatures.danceability} color="#a259c4" title="Dance" />
-              <span className="ml-auto text-[10px] font-mono text-[#f5f0e0]/40">
-                {Math.round(audioFeatures.tempo)} bpm
-              </span>
+          {/* Genre tags */}
+          {tags && tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag}
+                  className="text-[10px] px-1.5 py-0.5 rounded-md font-medium capitalize"
+                  style={{ background: `${accent}22`, color: accent }}
+                >
+                  {tag}
+                </span>
+              ))}
             </div>
           )}
         </div>

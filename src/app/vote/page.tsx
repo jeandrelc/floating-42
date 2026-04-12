@@ -14,14 +14,15 @@ interface Song {
   track: any;
   voteCount: number;
   audioFeatures?: { energy: number; danceability: number; valence: number; tempo: number; acousticness: number } | null;
+  tags?: string[] | null;
 }
 
-interface RecommendedTrack {
-  id: string;
+interface LastfmTrack {
   name: string;
-  artists: { name: string }[];
-  album: { name: string; images: { url: string }[] };
-  external_urls: { spotify: string };
+  artist: { name: string };
+  match: number;
+  image: { "#text": string; size: string }[];
+  url: string;
 }
 
 interface Week {
@@ -41,7 +42,7 @@ export default function VotePage() {
   const [myVote, setMyVote] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
-  const [recommendations, setRecommendations] = useState<RecommendedTrack[]>([]);
+  const [recommendations, setRecommendations] = useState<LastfmTrack[]>([]);
   const [recsLoading, setRecsLoading] = useState(false);
 
   useEffect(() => {
@@ -50,22 +51,39 @@ export default function VotePage() {
 
   useEffect(() => {
     async function load() {
-      const [weekRes, voteRes] = await Promise.all([
-        fetch("/api/weeks"),
-        fetch("/api/weeks/vote?weekId=current"),
-      ]);
+      const [weekRes] = await Promise.all([fetch("/api/weeks")]);
       const { week } = await weekRes.json();
       setWeek(week);
 
       if (week) {
         const voteCheck = await fetch(`/api/weeks/vote?weekId=${week.id}`);
         const { vote } = await voteCheck.json();
-        if (vote) setMyVote(vote.songId);
+        if (vote) {
+          setMyVote(vote.songId);
+          // Load recommendations for existing vote
+          const votedSong = week.songs.find((s: Song) => s.id === vote.songId);
+          if (votedSong?.track) fetchRecs(votedSong.track);
+        }
       }
       setLoading(false);
     }
     load();
   }, []);
+
+  async function fetchRecs(track: { name: string; artists: { name: string }[] }) {
+    const artist = track.artists?.[0]?.name;
+    if (!artist || !track.name) return;
+    setRecsLoading(true);
+    try {
+      const params = new URLSearchParams({ artist, track: track.name });
+      const recsRes = await fetch(`/api/recommendations?${params}`);
+      if (recsRes.ok) {
+        const { tracks } = await recsRes.json();
+        setRecommendations(tracks ?? []);
+      }
+    } catch {}
+    setRecsLoading(false);
+  }
 
   async function handleVote(songId: string) {
     if (!week || voting) return;
@@ -77,19 +95,8 @@ export default function VotePage() {
     });
     if (res.ok) {
       setMyVote(songId);
-      // Fetch recommendations based on voted song
       const votedSong = week.songs.find((s) => s.id === songId);
-      if (votedSong?.track?.id) {
-        setRecsLoading(true);
-        try {
-          const recsRes = await fetch(`/api/recommendations?trackId=${votedSong.track.id}`);
-          if (recsRes.ok) {
-            const { tracks } = await recsRes.json();
-            setRecommendations(tracks ?? []);
-          }
-        } catch {}
-        setRecsLoading(false);
-      }
+      if (votedSong?.track) fetchRecs(votedSong.track);
     }
     setVoting(false);
   }
@@ -179,34 +186,39 @@ export default function VotePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {recommendations.map((track) => (
-                <a
-                  key={track.id}
-                  href={track.external_urls.spotify}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-xl border border-[#2a2a45] bg-[#16162a] hover:border-[#f5841f]/40 hover:bg-[#f5841f]/5 transition-all group"
-                >
-                  {track.album.images[0] ? (
-                    <Image
-                      src={track.album.images[0].url}
-                      alt={track.album.name}
-                      width={48}
-                      height={48}
-                      className="rounded-lg shrink-0"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-lg bg-[#2a2a45] shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[#f5f0e0] truncate">{track.name}</p>
-                    <p className="text-xs text-[#f5f0e0]/50 truncate">
-                      {track.artists.map((a) => a.name).join(", ")}
-                    </p>
-                  </div>
-                  <ExternalLink size={14} className="shrink-0 text-[#f5f0e0]/20 group-hover:text-[#1DB954] transition-colors" />
-                </a>
-              ))}
+              {recommendations.map((track, i) => {
+                const img = track.image?.find((x) => x.size === "medium")?.["#text"] ||
+                  track.image?.find((x) => x["#text"])?.["#text"];
+                return (
+                  <a
+                    key={`${track.name}-${i}`}
+                    href={track.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 rounded-xl border border-[#2a2a45] bg-[#16162a] hover:border-[#f5841f]/40 hover:bg-[#f5841f]/5 transition-all group"
+                  >
+                    {img ? (
+                      <Image
+                        src={img}
+                        alt={track.name}
+                        width={48}
+                        height={48}
+                        className="rounded-lg shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-[#2a2a45] shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#f5f0e0] truncate">{track.name}</p>
+                      <p className="text-xs text-[#f5f0e0]/50 truncate">{track.artist.name}</p>
+                      <p className="text-[10px] text-[#f5f0e0]/30 mt-0.5">
+                        {Math.round(track.match * 100)}% match
+                      </p>
+                    </div>
+                    <ExternalLink size={14} className="shrink-0 text-[#f5f0e0]/20 group-hover:text-[#d51007] transition-colors" />
+                  </a>
+                );
+              })}
             </div>
           )}
         </div>

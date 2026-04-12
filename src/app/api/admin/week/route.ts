@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getPlaylistTracks, getUserProfile, getAudioFeatures } from "@/lib/spotify";
+import { getTopTags } from "@/lib/lastfm";
 import type { Session } from "next-auth";
 
 function requireAdmin(session: Session | null) {
@@ -174,6 +175,25 @@ export async function PATCH(req: NextRequest) {
           });
         }
       }
+    }
+
+    // Fetch Last.fm tags for songs that don't have them yet
+    const songsNeedingTags = await prisma.song.findMany({
+      where: { weekId, tags: null, trackName: { not: null } },
+      select: { id: true, trackName: true, artistNames: true },
+    });
+    for (const song of songsNeedingTags) {
+      const artist = song.artistNames?.split(", ")[0] ?? "";
+      if (!artist || !song.trackName) continue;
+      try {
+        const tags = await getTopTags(artist, song.trackName);
+        if (tags.length > 0) {
+          await prisma.song.update({
+            where: { id: song.id },
+            data: { tags: JSON.stringify(tags) },
+          });
+        }
+      } catch {}
     }
 
     const synced = await prisma.song.count({ where: { weekId } });
