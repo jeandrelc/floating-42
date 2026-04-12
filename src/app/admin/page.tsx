@@ -8,7 +8,7 @@ export default async function AdminPage() {
   if (!session) redirect("/login");
   if (!session.user.isAdmin) redirect("/");
 
-  const week = await prisma.week.findFirst({
+  const weeks = await prisma.week.findMany({
     orderBy: { number: "desc" },
     include: {
       songs: {
@@ -37,18 +37,16 @@ export default async function AdminPage() {
       .map((u) => [u.spotifyId!, u.name ?? u.spotifyId!])
   );
 
-  const mappedWeek = week
-    ? {
-        ...week,
-        songs: week.songs.map((s) => ({
-          ...s,
-          addedByName:
-            s.addedBySpotifyId && spotifyToName[s.addedBySpotifyId]
-              ? spotifyToName[s.addedBySpotifyId]
-              : s.addedByName,
-        })),
-      }
-    : null;
+  const mappedWeeks = weeks.map((week) => ({
+    ...week,
+    songs: week.songs.map((s) => ({
+      ...s,
+      addedByName:
+        s.addedBySpotifyId && spotifyToName[s.addedBySpotifyId]
+          ? spotifyToName[s.addedBySpotifyId]
+          : s.addedByName,
+    })),
+  }));
 
   const playlists = [
     { label: "Instrumental", id: process.env.SPOTIFY_PLAYLIST_ID ?? "" },
@@ -57,5 +55,5 @@ export default async function AdminPage() {
     { label: "Beers to Drink Songs To", id: process.env.SPOTIFY_PLAYLIST_ID_4 ?? "" },
   ].filter((p) => p.id);
 
-  return <AdminPanel currentWeek={mappedWeek} allUsers={allUsers} playlists={playlists} />;
+  return <AdminPanel allWeeks={mappedWeeks} allUsers={allUsers} playlists={playlists} />;
 }

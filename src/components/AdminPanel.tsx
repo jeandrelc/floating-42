@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Settings, RefreshCw, Vote, Trophy, Plus, Users, Trash2, UserPlus, Pencil, Check, X } from "lucide-react";
+import { Settings, RefreshCw, Vote, Trophy, Plus, Users, Trash2, UserPlus, Pencil, Check, X, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Song {
   id: string;
@@ -37,21 +37,29 @@ interface Playlist {
 }
 
 export function AdminPanel({
-  currentWeek,
+  allWeeks,
   allUsers,
   playlists,
 }: {
-  currentWeek: Week | null;
+  allWeeks: Week[];
   allUsers: User[];
   playlists: Playlist[];
 }) {
-  const [week, setWeek] = useState<Week | null>(currentWeek);
+  const [weeks, setWeeks] = useState<Week[]>(allWeeks);
+  const [selectedWeekId, setSelectedWeekId] = useState<string | null>(allWeeks[0]?.id ?? null);
   const [users, setUsers] = useState<User[]>(allUsers);
   const [loading, setLoading] = useState<string | null>(null);
   const [newTheme, setNewTheme] = useState("");
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
   const [newPlaylistId, setNewPlaylistId] = useState("");
+  const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberSpotify, setNewMemberSpotify] = useState("");
+  const [editingSpotify, setEditingSpotify] = useState<string | null>(null);
+  const [editingSpotifyValue, setEditingSpotifyValue] = useState("");
+  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
+
+  const selectedWeek = weeks.find((w) => w.id === selectedWeekId) ?? null;
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -59,11 +67,6 @@ export function AdminPanel({
     setNewStart(today);
     setNewEnd(nextWeek);
   }, []);
-  const [newMemberName, setNewMemberName] = useState("");
-  const [newMemberSpotify, setNewMemberSpotify] = useState("");
-  const [editingSpotify, setEditingSpotify] = useState<string | null>(null); // userId being edited
-  const [editingSpotifyValue, setEditingSpotifyValue] = useState("");
-  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
   function toast(text: string, ok = true) {
     setMessage({ text, ok });
@@ -80,11 +83,54 @@ export function AdminPanel({
     });
     const data = await res.json();
     if (res.ok) {
-      setWeek({ ...data.week, songs: [], votes: [] });
+      const newWeek = { ...data.week, songs: [], votes: [] };
+      setWeeks((w) => [newWeek, ...w]);
+      setSelectedWeekId(newWeek.id);
       setNewTheme("");
-      setNewStart("");
-      setNewEnd("");
+      setNewPlaylistId("");
       toast("Week created!");
+    } else {
+      toast(data.error ?? "Error", false);
+    }
+    setLoading(null);
+  }
+
+  async function deleteWeek(weekId: string) {
+    const target = weeks.find((w) => w.id === weekId);
+    if (!target) return;
+    if (!confirm(`Delete Week ${target.number} — ${target.theme}? This cannot be undone.`)) return;
+    setLoading("delete-" + weekId);
+    const res = await fetch("/api/admin/week", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ weekId }),
+    });
+    if (res.ok) {
+      const remaining = weeks.filter((w) => w.id !== weekId);
+      setWeeks(remaining);
+      if (selectedWeekId === weekId) setSelectedWeekId(remaining[0]?.id ?? null);
+      toast("Week deleted.");
+    } else {
+      const data = await res.json();
+      toast(data.error ?? "Error", false);
+    }
+    setLoading(null);
+  }
+
+  async function action(actionName: string, label: string) {
+    if (!selectedWeek) return;
+    setLoading(actionName);
+    const res = await fetch("/api/admin/week", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ weekId: selectedWeek.id, action: actionName }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      if (data.week) {
+        setWeeks((ws) => ws.map((w) => w.id === selectedWeek.id ? { ...w, ...data.week } : w));
+      }
+      toast(label + " done!");
     } else {
       toast(data.error ?? "Error", false);
     }
@@ -145,48 +191,11 @@ export function AdminPanel({
     setLoading(null);
   }
 
-  async function deleteWeek() {
-    if (!week) return;
-    if (!confirm(`Delete Week ${week.number} — ${week.theme}? This cannot be undone.`)) return;
-    setLoading("delete");
-    const res = await fetch("/api/admin/week", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ weekId: week.id }),
-    });
-    if (res.ok) {
-      setWeek(null);
-      toast("Week deleted.");
-    } else {
-      const data = await res.json();
-      toast(data.error ?? "Error", false);
-    }
-    setLoading(null);
-  }
-
-  async function action(actionName: string, label: string) {
-    if (!week) return;
-    setLoading(actionName);
-    const res = await fetch("/api/admin/week", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ weekId: week.id, action: actionName }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      if (data.week) setWeek((w) => ({ ...w!, ...data.week }));
-      toast(label + " done!");
-    } else {
-      toast(data.error ?? "Error", false);
-    }
-    setLoading(null);
-  }
-
-  const voteCounts = week
+  const voteCounts = selectedWeek
     ? Object.fromEntries(
-        week.songs.map((s) => [
+        selectedWeek.songs.map((s) => [
           s.id,
-          week.votes.filter((v) => v.songId === s.id).length,
+          selectedWeek.votes.filter((v) => v.songId === s.id).length,
         ])
       )
     : {};
@@ -195,23 +204,14 @@ export function AdminPanel({
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-8">
         <Settings size={28} className="text-[#a259c4]" />
-        <h1
-          className="text-3xl font-bold"
-          style={{ fontFamily: "Fredoka, sans-serif" }}
-        >
+        <h1 className="text-3xl font-bold" style={{ fontFamily: "Fredoka, sans-serif" }}>
           Admin Panel
         </h1>
       </div>
 
       {/* Toast */}
       {message && (
-        <div
-          className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-xl font-semibold text-sm shadow-lg ${
-            message.ok
-              ? "bg-[#4ecdc4] text-[#0f0f1e]"
-              : "bg-[#e8688a] text-white"
-          }`}
-        >
+        <div className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-xl font-semibold text-sm shadow-lg ${message.ok ? "bg-[#4ecdc4] text-[#0f0f1e]" : "bg-[#e8688a] text-white"}`}>
           {message.text}
         </div>
       )}
@@ -225,7 +225,7 @@ export function AdminPanel({
           <select
             value={newPlaylistId}
             onChange={(e) => {
-              const opt = playlists.find(p => p.id === e.target.value);
+              const opt = playlists.find((p) => p.id === e.target.value);
               setNewPlaylistId(e.target.value);
               if (opt && !newTheme) setNewTheme(opt.label);
             }}
@@ -273,98 +273,126 @@ export function AdminPanel({
         </div>
       </section>
 
-      {/* Current week controls */}
-      {week && (
-        <section className="rounded-2xl border border-[#2a2a45] bg-[#16162a] p-6 mb-6">
-          <h2 className="font-bold text-lg mb-1 flex items-center gap-2">
-            <Vote size={18} className="text-[#4ecdc4]" /> Week {week.number} —{" "}
-            {week.theme}
-          </h2>
-          <p className="text-xs text-[#f5f0e0]/40 mb-5">
-            {week.songs.length} songs · {week.votes.length} votes ·{" "}
-            {week.votingOpen ? "🟢 Voting open" : "🔴 Voting closed"}
-            {week.winnerId && " · Winner set"}
-          </p>
+      {/* All weeks list */}
+      <section className="rounded-2xl border border-[#2a2a45] bg-[#16162a] p-6 mb-6">
+        <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
+          <Vote size={18} className="text-[#4ecdc4]" /> Weeks
+        </h2>
 
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => action("sync-songs", "Sync songs")}
-              disabled={!!loading}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#2a2a45] text-[#f5f0e0] font-semibold text-sm hover:bg-[#3a3a5a] transition-colors disabled:opacity-40"
-            >
-              <RefreshCw size={14} className={loading === "sync-songs" ? "animate-spin" : ""} />
-              Sync songs from Spotify
-            </button>
-
-            <button
-              onClick={() => action("toggle-voting", "Toggle voting")}
-              disabled={!!loading || !!week.winnerId}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors disabled:opacity-40 ${
-                week.votingOpen
-                  ? "bg-[#e8688a]/10 border border-[#e8688a]/30 text-[#e8688a] hover:bg-[#e8688a]/20"
-                  : "bg-[#4ecdc4]/10 border border-[#4ecdc4]/30 text-[#4ecdc4] hover:bg-[#4ecdc4]/20"
-              }`}
-            >
-              <Vote size={14} />
-              {week.votingOpen ? "Close voting" : "Open voting"}
-            </button>
-
-            {week.votingOpen && (
-              <button
-                onClick={() => action("close-voting", "Close voting & set winner")}
-                disabled={!!loading}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#f4c842]/10 border border-[#f4c842]/30 text-[#f4c842] font-semibold text-sm hover:bg-[#f4c842]/20 transition-colors disabled:opacity-40"
-              >
-                <Trophy size={14} />
-                Close voting & set winner
-              </button>
-            )}
-
-            <button
-              onClick={deleteWeek}
-              disabled={!!loading}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#e8688a]/10 border border-[#e8688a]/30 text-[#e8688a] font-semibold text-sm hover:bg-[#e8688a]/20 transition-colors disabled:opacity-40 ml-auto"
-            >
-              <Trash2 size={14} />
-              Delete week
-            </button>
-          </div>
-
-          {/* Vote breakdown */}
-          {week.songs.length > 0 && (
-            <div className="mt-5 space-y-2">
-              <p className="text-xs font-semibold text-[#f5f0e0]/40 uppercase tracking-wider">
-                Vote breakdown
-              </p>
-              {week.songs
-                .sort((a, b) => (voteCounts[b.id] ?? 0) - (voteCounts[a.id] ?? 0))
-                .map((song) => (
-                  <div
-                    key={song.id}
-                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-sm ${
-                      week.winnerId === song.id
-                        ? "bg-[#f4c842]/10 border border-[#f4c842]/30"
-                        : "bg-[#0f0f1e]"
-                    }`}
+        {weeks.length === 0 ? (
+          <p className="text-sm text-[#f5f0e0]/40">No weeks yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {weeks.map((w) => {
+              const isSelected = selectedWeekId === w.id;
+              const wVoteCounts = Object.fromEntries(
+                w.songs.map((s) => [s.id, w.votes.filter((v) => v.songId === s.id).length])
+              );
+              return (
+                <div key={w.id} className={`rounded-xl border transition-all ${isSelected ? "border-[#4ecdc4]/40 bg-[#4ecdc4]/5" : "border-[#2a2a45] bg-[#0f0f1e]"}`}>
+                  {/* Week row */}
+                  <button
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left"
+                    onClick={() => setSelectedWeekId(isSelected ? null : w.id)}
                   >
-                    <div className="truncate">
-                      <span className="text-[#f5f0e0]/80">
-                        {week.winnerId === song.id && "👑 "}
-                        {song.trackName ?? song.spotifyTrackId}
-                      </span>
-                      <span className="text-[#f5f0e0]/40 text-xs ml-2">
-                        by {song.addedByName}
-                      </span>
+                    <div className="w-10 h-10 rounded-xl bg-[#f5841f]/10 border border-[#f5841f]/20 flex flex-col items-center justify-center shrink-0">
+                      <span className="text-[9px] font-bold text-[#f5841f]/60 uppercase leading-none">Wk</span>
+                      <span className="text-sm font-bold text-[#f5841f] leading-none">{w.number}</span>
                     </div>
-                    <span className="font-bold text-[#f4c842] shrink-0 ml-3">
-                      {voteCounts[song.id] ?? 0} votes
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#f5f0e0] truncate">{w.theme}</p>
+                      <p className="text-xs text-[#f5f0e0]/40">
+                        {w.songs.length} songs · {w.votes.length} votes
+                        {w.votingOpen && <span className="text-[#4ecdc4] ml-1">· Voting open</span>}
+                        {w.winnerId && <span className="text-[#f4c842] ml-1">· Winner set</span>}
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteWeek(w.id); }}
+                      disabled={!!loading}
+                      className="shrink-0 p-1.5 rounded-lg text-[#f5f0e0]/20 hover:text-[#e8688a] hover:bg-[#e8688a]/10 transition-colors disabled:opacity-40"
+                      title="Delete week"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <span className="shrink-0 text-[#f5f0e0]/30">
+                      {isSelected ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </span>
-                  </div>
-                ))}
-            </div>
-          )}
-        </section>
-      )}
+                  </button>
+
+                  {/* Expanded controls */}
+                  {isSelected && (
+                    <div className="px-4 pb-4 border-t border-[#2a2a45]/50 pt-3">
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <button
+                          onClick={() => action("sync-songs", "Sync songs")}
+                          disabled={!!loading}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#2a2a45] text-[#f5f0e0] font-semibold text-sm hover:bg-[#3a3a5a] transition-colors disabled:opacity-40"
+                        >
+                          <RefreshCw size={13} className={loading === "sync-songs" ? "animate-spin" : ""} />
+                          Sync songs
+                        </button>
+
+                        <button
+                          onClick={() => action("toggle-voting", "Toggle voting")}
+                          disabled={!!loading || !!w.winnerId}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl font-semibold text-sm transition-colors disabled:opacity-40 ${
+                            w.votingOpen
+                              ? "bg-[#e8688a]/10 border border-[#e8688a]/30 text-[#e8688a] hover:bg-[#e8688a]/20"
+                              : "bg-[#4ecdc4]/10 border border-[#4ecdc4]/30 text-[#4ecdc4] hover:bg-[#4ecdc4]/20"
+                          }`}
+                        >
+                          <Vote size={13} />
+                          {w.votingOpen ? "Close voting" : "Open voting"}
+                        </button>
+
+                        {w.votingOpen && (
+                          <button
+                            onClick={() => action("close-voting", "Close voting & set winner")}
+                            disabled={!!loading}
+                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#f4c842]/10 border border-[#f4c842]/30 text-[#f4c842] font-semibold text-sm hover:bg-[#f4c842]/20 transition-colors disabled:opacity-40"
+                          >
+                            <Trophy size={13} />
+                            Set winner
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Vote breakdown */}
+                      {w.songs.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-semibold text-[#f5f0e0]/40 uppercase tracking-wider mb-2">Vote breakdown</p>
+                          {w.songs
+                            .sort((a, b) => (wVoteCounts[b.id] ?? 0) - (wVoteCounts[a.id] ?? 0))
+                            .map((song) => (
+                              <div
+                                key={song.id}
+                                className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+                                  w.winnerId === song.id ? "bg-[#f4c842]/10 border border-[#f4c842]/30" : "bg-[#16162a]"
+                                }`}
+                              >
+                                <div className="truncate">
+                                  <span className="text-[#f5f0e0]/80">
+                                    {w.winnerId === song.id && "👑 "}
+                                    {song.trackName ?? song.spotifyTrackId}
+                                  </span>
+                                  <span className="text-[#f5f0e0]/40 text-xs ml-2">by {song.addedByName}</span>
+                                </div>
+                                <span className="font-bold text-[#f4c842] shrink-0 ml-3">
+                                  {wVoteCounts[song.id] ?? 0}
+                                </span>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {/* Members */}
       <section className="rounded-2xl border border-[#2a2a45] bg-[#16162a] p-6">
@@ -372,7 +400,6 @@ export function AdminPanel({
           <Users size={18} className="text-[#e8688a]" /> Members ({users.length})
         </h2>
 
-        {/* Add member */}
         <div className="flex flex-col gap-2 mb-4">
           <div className="flex gap-2">
             <input
@@ -431,7 +458,6 @@ export function AdminPanel({
                   </div>
                 )}
               </div>
-              {/* Spotify ID row */}
               {editingSpotify === user.id ? (
                 <div className="flex items-center gap-2 mt-1.5 ml-11">
                   <input
@@ -453,16 +479,16 @@ export function AdminPanel({
           ))}
         </div>
 
-        {/* Unmatched Spotify IDs from songs */}
-        {week && week.songs.length > 0 && (() => {
-          const mappedIds = new Set(users.map(u => u.spotifyId).filter(Boolean));
-          const unmatched = [...new Set(week.songs.map(s => s.addedBySpotifyId).filter((id): id is string => !!id && !mappedIds.has(id)))];
+        {/* Unmatched Spotify IDs from selected week's songs */}
+        {selectedWeek && selectedWeek.songs.length > 0 && (() => {
+          const mappedIds = new Set(users.map((u) => u.spotifyId).filter(Boolean));
+          const unmatched = [...new Set(selectedWeek.songs.map((s) => s.addedBySpotifyId).filter((id): id is string => !!id && !mappedIds.has(id)))];
           if (!unmatched.length) return null;
           return (
             <div className="mt-4 p-3 rounded-xl bg-[#0f0f1e] border border-[#2a2a45]">
-              <p className="text-xs font-semibold text-[#f5f0e0]/40 uppercase tracking-wider mb-2">Unmatched song IDs</p>
+              <p className="text-xs font-semibold text-[#f5f0e0]/40 uppercase tracking-wider mb-2">Unmatched song IDs (Week {selectedWeek.number})</p>
               <div className="space-y-1">
-                {unmatched.map(id => (
+                {unmatched.map((id) => (
                   <p key={id} className="text-xs font-mono text-[#f5f0e0]/50 select-all">{id}</p>
                 ))}
               </div>
