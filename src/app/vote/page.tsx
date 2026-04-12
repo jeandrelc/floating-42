@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { SongCard } from "@/components/SongCard";
+import { bestImage } from "@/lib/lastfm";
 import { CheckCircle2, Lock, ExternalLink, Sparkles } from "lucide-react";
 
 interface Song {
@@ -187,8 +188,7 @@ export default function VotePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {recommendations.map((track, i) => {
-                const img = track.image?.find((x) => x.size === "medium")?.["#text"] ||
-                  track.image?.find((x) => x["#text"])?.["#text"];
+                const img = bestImage(track.image ?? []);
                 return (
                   <a
                     key={`${track.name}-${i}`}
