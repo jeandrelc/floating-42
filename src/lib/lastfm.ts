@@ -28,6 +28,47 @@ export async function getSimilarTracks(
   return data.similartracks?.track ?? [];
 }
 
+export async function getSimilarArtists(
+  artist: string,
+  limit = 5
+): Promise<{ name: string; match: number }[]> {
+  const url = new URL(BASE);
+  url.searchParams.set("method", "artist.getSimilar");
+  url.searchParams.set("artist", artist);
+  url.searchParams.set("limit", String(limit));
+  url.searchParams.set("autocorrect", "1");
+  url.searchParams.set("api_key", API_KEY);
+  url.searchParams.set("format", "json");
+
+  const res = await fetch(url.toString(), { next: { revalidate: 3600 } });
+  const data = await res.json();
+  return data.similarartists?.artist ?? [];
+}
+
+export async function getArtistTopTracks(
+  artist: string,
+  limit = 3
+): Promise<LastfmTrack[]> {
+  const url = new URL(BASE);
+  url.searchParams.set("method", "artist.getTopTracks");
+  url.searchParams.set("artist", artist);
+  url.searchParams.set("limit", String(limit));
+  url.searchParams.set("autocorrect", "1");
+  url.searchParams.set("api_key", API_KEY);
+  url.searchParams.set("format", "json");
+
+  const res = await fetch(url.toString(), { next: { revalidate: 3600 } });
+  const data = await res.json();
+  const tracks = data.toptracks?.track ?? [];
+  return tracks.map((t: any) => ({
+    name: t.name,
+    artist: { name: artist },
+    match: 0,
+    image: t.image ?? [],
+    url: t.url,
+  }));
+}
+
 export async function getTopTags(
   artist: string,
   track: string,
