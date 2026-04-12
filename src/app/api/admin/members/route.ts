@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+
+function generateLoginCode(): string {
+  const base = process.env.INVITE_CODE ?? "float42";
+  const suffix = randomBytes(3).toString("hex"); // 6 hex chars, e.g. "a3f9b2"
+  return `${base}-${suffix}`;
+}
 
 // POST /api/admin/members - add a new member by username
 export async function POST(req: NextRequest) {
@@ -9,14 +16,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { name, spotifyUsername } = await req.json();
+  const { name, email, spotifyUsername } = await req.json();
   if (!name?.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
+  if (!email?.trim()) {
+    return NextResponse.json({ error: "Email is required" }, { status: 400 });
+  }
 
-  const existing = await prisma.user.findFirst({ where: { name: name.trim() } });
+  const existing = await prisma.user.findFirst({
+    where: { OR: [{ name: name.trim() }, { email: email.trim().toLowerCase() }] },
+  });
   if (existing) {
-    return NextResponse.json({ error: "Username already exists" }, { status: 409 });
+    return NextResponse.json({ error: "Name or email already exists" }, { status: 409 });
   }
 
   // Resolve Spotify vanity username → internal user ID
@@ -39,9 +51,13 @@ export async function POST(req: NextRequest) {
     if (!spotifyId) spotifyId = spotifyUsername.trim();
   }
 
+  const loginCode = generateLoginCode();
+
   const user = await prisma.user.create({
     data: {
       name: name.trim(),
+      email: email.trim().toLowerCase(),
+      loginCode,
       ...(spotifyId ? { spotifyId } : {}),
     },
   });

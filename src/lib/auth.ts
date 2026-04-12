@@ -19,17 +19,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        name: { label: "Display Name" },
-        code: { label: "Invite Code" },
+        email: { label: "Email" },
+        code: { label: "Login Code" },
       },
       async authorize(credentials) {
-        const code = credentials.code as string;
-        const name = (credentials.name as string)?.trim();
-        if (!code || !name) return null;
-        if (code !== process.env.INVITE_CODE) return null;
+        const email = (credentials.email as string)?.trim().toLowerCase();
+        const code = (credentials.code as string)?.trim();
+        if (!email || !code) return null;
 
-        const user = await prisma.user.findFirst({ where: { name } });
-        if (!user) throw new Error("InvalidUsername");
+        const user = await prisma.user.findFirst({ where: { email } });
+        if (!user) throw new Error("InvalidEmail");
+        if (!user.loginCode || user.loginCode !== code) throw new Error("InvalidCode");
         return user;
       },
     }),

@@ -5,18 +5,18 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 
 export default function LoginPage() {
-  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleJoin(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !code.trim()) return;
+    if (!email.trim() || !code.trim()) return;
     setLoading(true);
     setError(null);
     const res = await signIn("credentials", {
-      name: name.trim(),
+      email: email.trim(),
       code: code.trim(),
       callbackUrl: "/",
       redirect: false,
@@ -25,9 +25,9 @@ export default function LoginPage() {
       setError("Something went wrong. Try again.");
       setLoading(false);
     } else if (res.error || !res.ok) {
-      setError(res.error === "InvalidUsername"
-        ? "Username not found. Ask the admin to add you first."
-        : "Wrong invite code.");
+      setError(res.error === "InvalidEmail"
+        ? "Email not found. Ask the admin to add you first."
+        : "Wrong login code.");
       setLoading(false);
     } else {
       window.location.replace(res.url ?? "/");
@@ -68,16 +68,16 @@ export default function LoginPage() {
         {/* Invite code form */}
         <form onSubmit={handleJoin} className="w-full flex flex-col gap-3">
           <input
-            type="text"
-            placeholder="Your username"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            type="email"
+            placeholder="Your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
             className="w-full px-4 py-3 rounded-xl bg-[#16162a] border border-[#2a2a45] text-[#f5f0e0] placeholder:text-[#f5f0e0]/30 focus:outline-none focus:border-[#f5841f] text-sm"
           />
           <input
             type="password"
-            placeholder="Invite code"
+            placeholder="Login code"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             required
@@ -86,7 +86,7 @@ export default function LoginPage() {
           {error && <p className="text-[#e8688a] text-sm">{error}</p>}
           <button
             type="submit"
-            disabled={loading || !name.trim() || !code.trim()}
+            disabled={loading || !email.trim() || !code.trim()}
             className="w-full px-8 py-4 rounded-2xl font-bold text-lg bg-[#f5841f] text-white hover:bg-[#f9a94e] transition-all hover:scale-105 shadow-lg shadow-[#f5841f]/30 disabled:opacity-60 disabled:scale-100"
           >
             {loading ? "Joining…" : "Join the battle"}

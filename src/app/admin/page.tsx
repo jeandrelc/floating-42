@@ -26,7 +26,7 @@ export default async function AdminPage() {
   });
 
   const allUsers = await prisma.user.findMany({
-    select: { id: true, name: true, image: true, spotifyId: true, isAdmin: true },
+    select: { id: true, name: true, email: true, image: true, spotifyId: true, loginCode: true, isAdmin: true },
     orderBy: { name: "asc" },
   });
 

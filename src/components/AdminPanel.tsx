@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Settings, RefreshCw, Vote, Trophy, Plus, Users, Trash2, UserPlus, Pencil, Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Settings, RefreshCw, Vote, Trophy, Plus, Users, Trash2, UserPlus, Pencil, Check, X, ChevronDown, ChevronUp, Copy } from "lucide-react";
 
 interface Song {
   id: string;
@@ -26,8 +26,10 @@ interface Week {
 interface User {
   id: string;
   name: string | null;
+  email: string | null;
   image: string | null;
   spotifyId: string | null;
+  loginCode: string | null;
   isAdmin: boolean;
 }
 
@@ -54,6 +56,7 @@ export function AdminPanel({
   const [newEnd, setNewEnd] = useState("");
   const [newPlaylistId, setNewPlaylistId] = useState("");
   const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberSpotify, setNewMemberSpotify] = useState("");
   const [editingSpotify, setEditingSpotify] = useState<string | null>(null);
   const [editingSpotifyValue, setEditingSpotifyValue] = useState("");
@@ -138,17 +141,18 @@ export function AdminPanel({
   }
 
   async function addMember() {
-    if (!newMemberName.trim()) return;
+    if (!newMemberName.trim() || !newMemberEmail.trim()) return;
     setLoading("add-member");
     const res = await fetch("/api/admin/members", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newMemberName.trim(), spotifyUsername: newMemberSpotify.trim() }),
+      body: JSON.stringify({ name: newMemberName.trim(), email: newMemberEmail.trim(), spotifyUsername: newMemberSpotify.trim() }),
     });
     const data = await res.json();
     if (res.ok) {
       setUsers((u) => [...u, data.user]);
       setNewMemberName("");
+      setNewMemberEmail("");
       setNewMemberSpotify("");
       toast("Member added!");
     } else {
@@ -404,9 +408,16 @@ export function AdminPanel({
           <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
-              placeholder="Display name (for login)"
+              placeholder="Display name"
               value={newMemberName}
               onChange={(e) => setNewMemberName(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-xl bg-[#0f0f1e] border border-[#2a2a45] text-[#f5f0e0] text-sm placeholder:text-[#f5f0e0]/30 focus:outline-none focus:border-[#e8688a]"
+            />
+            <input
+              type="email"
+              placeholder="Email address"
+              value={newMemberEmail}
+              onChange={(e) => setNewMemberEmail(e.target.value)}
               className="flex-1 px-3 py-2 rounded-xl bg-[#0f0f1e] border border-[#2a2a45] text-[#f5f0e0] text-sm placeholder:text-[#f5f0e0]/30 focus:outline-none focus:border-[#e8688a]"
             />
             <input
@@ -419,14 +430,14 @@ export function AdminPanel({
             />
             <button
               onClick={addMember}
-              disabled={!newMemberName.trim() || !!loading}
+              disabled={!newMemberName.trim() || !newMemberEmail.trim() || !!loading}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#e8688a]/10 border border-[#e8688a]/30 text-[#e8688a] font-semibold text-sm hover:bg-[#e8688a]/20 transition-colors disabled:opacity-40"
             >
               <UserPlus size={14} />
               Add
             </button>
           </div>
-          <p className="text-xs text-[#f5f0e0]/30">Spotify username links the member to songs they added on the playlist</p>
+          <p className="text-xs text-[#f5f0e0]/30">A unique login code is generated automatically — share it with the member</p>
         </div>
 
         <div className="space-y-1">
@@ -458,6 +469,22 @@ export function AdminPanel({
                   </div>
                 )}
               </div>
+              {/* Email + login code */}
+              <div className="ml-11 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                {user.email && (
+                  <p className="text-xs text-[#f5f0e0]/30 truncate">{user.email}</p>
+                )}
+                {user.loginCode && (
+                  <button
+                    onClick={() => navigator.clipboard.writeText(user.loginCode!).then(() => toast("Code copied!"))}
+                    className="flex items-center gap-1 text-[10px] font-mono text-[#f5841f]/70 hover:text-[#f5841f] transition-colors"
+                    title="Copy login code"
+                  >
+                    <span>{user.loginCode}</span>
+                    <Copy size={10} />
+                  </button>
+                )}
+              </div>
               {editingSpotify === user.id ? (
                 <div className="flex items-center gap-2 mt-1.5 ml-11">
                   <input
@@ -473,7 +500,7 @@ export function AdminPanel({
                   <button onClick={() => setEditingSpotify(null)} className="text-[#f5f0e0]/30"><X size={14} /></button>
                 </div>
               ) : user.spotifyId ? (
-                <p className="text-xs text-[#f5f0e0]/25 ml-11 mt-0.5 font-mono truncate">{user.spotifyId}</p>
+                <p className="text-xs text-[#f5f0e0]/20 ml-11 mt-0.5 font-mono truncate">{user.spotifyId}</p>
               ) : null}
             </div>
           ))}
