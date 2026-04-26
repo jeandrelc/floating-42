@@ -228,6 +228,14 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ synced });
   }
 
+  if (action === "delete-song") {
+    const { songId } = body;
+    if (!songId) return NextResponse.json({ error: "Missing songId" }, { status: 400 });
+    await prisma.vote.deleteMany({ where: { songId } });
+    await prisma.song.delete({ where: { id: songId } });
+    return NextResponse.json({ ok: true });
+  }
+
   if (action === "close-voting") {
     // Tally votes and pick winner
     const votes = await prisma.vote.groupBy({

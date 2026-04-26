@@ -177,6 +177,30 @@ export function AdminPanel({
     setEditingSpotify(null);
   }
 
+  async function deleteSong(weekId: string, songId: string) {
+    if (!confirm("Remove this song from the week?")) return;
+    setLoading("delete-song-" + songId);
+    const res = await fetch("/api/admin/week", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ weekId, action: "delete-song", songId }),
+    });
+    if (res.ok) {
+      setWeeks((ws) =>
+        ws.map((w) =>
+          w.id === weekId
+            ? { ...w, songs: w.songs.filter((s) => s.id !== songId), votes: w.votes.filter((v) => v.songId !== songId) }
+            : w
+        )
+      );
+      toast("Song removed.");
+    } else {
+      const data = await res.json();
+      toast(data.error ?? "Error", false);
+    }
+    setLoading(null);
+  }
+
   async function removeMember(userId: string) {
     if (!confirm("Remove this member?")) return;
     setLoading("remove-" + userId);
@@ -371,7 +395,7 @@ export function AdminPanel({
                             .map((song) => (
                               <div
                                 key={song.id}
-                                className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+                                className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm group ${
                                   w.winnerId === song.id ? "bg-[#f4c842]/10 border border-[#f4c842]/30" : "bg-[#16162a]"
                                 }`}
                               >
@@ -382,9 +406,19 @@ export function AdminPanel({
                                   </span>
                                   <span className="text-[#f5f0e0]/40 text-xs ml-2">by {song.addedByName}</span>
                                 </div>
-                                <span className="font-bold text-[#f4c842] shrink-0 ml-3">
-                                  {wVoteCounts[song.id] ?? 0}
-                                </span>
+                                <div className="flex items-center gap-2 shrink-0 ml-3">
+                                  <span className="font-bold text-[#f4c842]">
+                                    {wVoteCounts[song.id] ?? 0}
+                                  </span>
+                                  <button
+                                    onClick={() => deleteSong(w.id, song.id)}
+                                    disabled={!!loading}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg text-[#f5f0e0]/30 hover:text-[#e8688a] hover:bg-[#e8688a]/10 disabled:opacity-40"
+                                    title="Remove song"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
                               </div>
                             ))}
                         </div>

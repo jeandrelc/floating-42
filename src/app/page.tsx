@@ -4,7 +4,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { SongCard } from "@/components/SongCard";
-import { Clock, Music2 } from "lucide-react";
+import { Clock, Music2, Users, ThumbsUp } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 export const revalidate = 60;
@@ -44,6 +44,8 @@ export default async function HomePage() {
     );
   }
 
+  const totalMembers = await prisma.user.count();
+
   const members = await prisma.user.findMany({
     where: { spotifyId: { not: null } },
     select: { spotifyId: true, name: true },
@@ -78,6 +80,12 @@ export default async function HomePage() {
     artistBio: song.artistBio ?? null,
     voteCount: week.votes.filter((v) => v.songId === song.id).length,
   }));
+
+  const uniqueSubmitterCount = new Set(
+    week.songs.map((s) => s.addedBySpotifyId ?? `name:${s.addedByName}`)
+  ).size;
+
+  const uniqueVoterCount = new Set(week.votes.map((v) => v.userId)).size;
 
   // Aggregate genre tags across the week
   const tagCounts = new Map<string, number>();
@@ -130,6 +138,17 @@ export default async function HomePage() {
               <span className="text-[#f5f0e0]/30">·</span>
               <Music2 size={14} />
               <span>{songsWithMeta.length} songs added</span>
+            </div>
+            <div className="flex items-center gap-2 text-[#f5f0e0]/60 text-sm mt-1">
+              <Users size={14} />
+              <span>{uniqueSubmitterCount}/{totalMembers} members submitted</span>
+              {(week.votingOpen || !!week.winnerId) && (
+                <>
+                  <span className="text-[#f5f0e0]/30">·</span>
+                  <ThumbsUp size={14} />
+                  <span>{uniqueVoterCount}/{totalMembers} voted</span>
+                </>
+              )}
             </div>
             {week.votingOpen && (
               <div className="mt-4">
