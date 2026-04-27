@@ -43,18 +43,25 @@ export default async function LeaderboardPage() {
   const winsByPerson = new Map<string, { name: string; image?: string | null; wins: number }>();
 
   for (const week of weeks) {
-    const winningSong = week.songs.find((s) => s.id === week.winnerId);
-    if (!winningSong) continue;
-    const key = resolveName(winningSong);
-    const existing = winsByPerson.get(key);
-    if (existing) {
-      existing.wins++;
-    } else {
-      winsByPerson.set(key, {
-        name: key,
-        image: winningSong.addedByImage,
-        wins: 1,
-      });
+    const voteCounts = new Map<string, number>();
+    for (const vote of week.votes) {
+      voteCounts.set(vote.songId, (voteCounts.get(vote.songId) ?? 0) + 1);
+    }
+    const maxVotes = Math.max(0, ...voteCounts.values());
+    if (maxVotes === 0) continue;
+    const winningSongs = week.songs.filter((s) => (voteCounts.get(s.id) ?? 0) === maxVotes);
+    for (const winningSong of winningSongs) {
+      const key = resolveName(winningSong);
+      const existing = winsByPerson.get(key);
+      if (existing) {
+        existing.wins++;
+      } else {
+        winsByPerson.set(key, {
+          name: key,
+          image: winningSong.addedByImage,
+          wins: 1,
+        });
+      }
     }
   }
 
@@ -63,15 +70,20 @@ export default async function LeaderboardPage() {
   // Recent winners (last 5 weeks)
   const recentWinners = await Promise.all(
     weeks.slice(0, 5).map(async (week) => {
-      const winningSong = week.songs.find((s) => s.id === week.winnerId);
-      const voteCount = week.votes.filter((v) => v.songId === week.winnerId).length;
-      let track = null;
-      if (winningSong) {
-        try {
-          track = await getTrack(winningSong.spotifyTrackId);
-        } catch {}
+      const voteCounts = new Map<string, number>();
+      for (const vote of week.votes) {
+        voteCounts.set(vote.songId, (voteCounts.get(vote.songId) ?? 0) + 1);
       }
-      return { week, winningSong, track, voteCount };
+      const maxVotes = Math.max(0, ...voteCounts.values());
+      const winningSongs = maxVotes > 0
+        ? week.songs.filter((s) => (voteCounts.get(s.id) ?? 0) === maxVotes)
+        : [];
+      const tracks = await Promise.all(
+        winningSongs.map(async (song) => {
+          try { return await getTrack(song.spotifyTrackId); } catch { return null; }
+        })
+      );
+      return { week, winningSongs, tracks, voteCount: maxVotes };
     })
   );
 
@@ -148,7 +160,7 @@ export default async function LeaderboardPage() {
             Recent Winners
           </h2>
           <div className="space-y-3">
-            {recentWinners.map(({ week, winningSong, track, voteCount }) => (
+            {recentWinners.map(({ week, winningSongs, tracks, voteCount }) => (
               <div
                 key={week.id}
                 className="flex items-center gap-4 p-4 rounded-2xl border border-[#2a2a45] bg-[#16162a]"
@@ -158,25 +170,27 @@ export default async function LeaderboardPage() {
                     W{week.number}
                   </span>
                 </div>
-                {track?.album.images[0] && (
+                {tracks[0]?.album.images[0] && (
                   <Image
-                    src={track.album.images[0].url}
-                    alt={track.album.name}
+                    src={tracks[0].album.images[0].url}
+                    alt={tracks[0].album.name}
                     width={44}
                     height={44}
                     className="rounded-lg shrink-0"
                   />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm text-[#f5f0e0] truncate">
-                    {track?.name ?? "Unknown"}
-                  </p>
-                  <p className="text-xs text-[#f5f0e0]/60 truncate">
-                    {track?.artists.map((a) => a.name).join(", ")} ·{" "}
-                    <span className="text-[#f5841f]">
-                      {winningSong ? resolveName(winningSong) : ""}
-                    </span>
-                  </p>
+                  {winningSongs.map((song, i) => (
+                    <div key={song.id} className={i > 0 ? "mt-1" : ""}>
+                      <p className="font-bold text-sm text-[#f5f0e0] truncate">
+                        {tracks[i]?.name ?? "Unknown"}
+                      </p>
+                      <p className="text-xs text-[#f5f0e0]/60 truncate">
+                        {tracks[i]?.artists.map((a) => a.name).join(", ")} ·{" "}
+                        <span className="text-[#f5841f]">{resolveName(song)}</span>
+                      </p>
+                    </div>
+                  ))}
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-xs text-[#f5f0e0]/40">{week.theme}</p>

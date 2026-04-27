@@ -94,6 +94,11 @@ export default async function HomePage() {
       tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
     }
   }
+  const maxVoteCount =
+    !week.votingOpen && week.winnerId
+      ? Math.max(...songsWithMeta.map((s) => s.voteCount))
+      : 0;
+
   const topTags = [...tagCounts.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
@@ -207,7 +212,7 @@ export default async function HomePage() {
             <SongCard
               key={song.id}
               song={song}
-              isWinner={week.winnerId === song.id}
+              isWinner={!week.votingOpen && !!week.winnerId && song.voteCount === maxVoteCount && maxVoteCount > 0}
               showVoteCount={!week.votingOpen && !!week.winnerId}
             />
           ))}

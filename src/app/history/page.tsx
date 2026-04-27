@@ -22,17 +22,20 @@ export default async function HistoryPage() {
 
   const weeksWithMeta = await Promise.all(
     weeks.map(async (week) => {
-      const winningSong = week.songs.find((s) => s.id === week.winnerId);
-      let winnerTrack = null;
-      if (winningSong) {
-        try {
-          winnerTrack = await getTrack(winningSong.spotifyTrackId);
-        } catch {}
+      const voteCounts = new Map<string, number>();
+      for (const vote of week.votes) {
+        voteCounts.set(vote.songId, (voteCounts.get(vote.songId) ?? 0) + 1);
       }
-      const winnerVotes = week.votes.filter(
-        (v) => v.songId === week.winnerId
-      ).length;
-      return { week, winningSong, winnerTrack, winnerVotes };
+      const maxVotes = week.winnerId ? Math.max(0, ...voteCounts.values()) : 0;
+      const winningSongs = maxVotes > 0
+        ? week.songs.filter((s) => (voteCounts.get(s.id) ?? 0) === maxVotes)
+        : [];
+      const winnerTracks = await Promise.all(
+        winningSongs.map(async (song) => {
+          try { return await getTrack(song.spotifyTrackId); } catch { return null; }
+        })
+      );
+      return { week, winningSongs, winnerTracks, winnerVotes: maxVotes };
     })
   );
 
@@ -55,8 +58,9 @@ export default async function HistoryPage() {
         </p>
       ) : (
         <div className="space-y-4">
-          {weeksWithMeta.map(({ week, winningSong, winnerTrack, winnerVotes }) => {
+          {weeksWithMeta.map(({ week, winningSongs, winnerTracks, winnerVotes }) => {
             const isActive = !week.winnerId && week.votingOpen !== false;
+            const firstTrack = winnerTracks[0] ?? null;
             return (
               <div
                 key={week.id}
@@ -74,10 +78,10 @@ export default async function HistoryPage() {
                   </div>
 
                   {/* Winner album art */}
-                  {winnerTrack?.album.images[0] ? (
+                  {firstTrack?.album.images[0] ? (
                     <Image
-                      src={winnerTrack.album.images[0].url}
-                      alt={winnerTrack.album.name}
+                      src={firstTrack.album.images[0].url}
+                      alt={firstTrack.album.name}
                       width={52}
                       height={52}
                       className="rounded-xl shrink-0"
@@ -103,16 +107,22 @@ export default async function HistoryPage() {
                       </span>
                     </div>
 
-                    {winningSong ? (
-                      <div className="flex items-center gap-1.5 mt-2">
-                        <span className="text-sm">👑</span>
-                        <span className="text-sm font-semibold text-[#f4c842] truncate">
-                          {winnerTrack?.name ?? "Unknown"} —{" "}
-                          {winningSong.addedByName}
-                        </span>
-                        <span className="text-xs text-[#f5f0e0]/40 shrink-0">
-                          ({winnerVotes} votes)
-                        </span>
+                    {winningSongs.length > 0 ? (
+                      <div className="mt-2 space-y-0.5">
+                        {winningSongs.map((song, i) => (
+                          <div key={song.id} className="flex items-center gap-1.5">
+                            <span className="text-sm">👑</span>
+                            <span className="text-sm font-semibold text-[#f4c842] truncate">
+                              {winnerTracks[i]?.name ?? "Unknown"} —{" "}
+                              {song.addedByName}
+                            </span>
+                            {i === 0 && (
+                              <span className="text-xs text-[#f5f0e0]/40 shrink-0">
+                                ({winnerVotes} votes)
+                              </span>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     ) : isActive ? (
                       <span className="inline-block mt-2 px-2 py-0.5 rounded-lg bg-[#4ecdc4]/10 text-[#4ecdc4] text-xs font-semibold">
