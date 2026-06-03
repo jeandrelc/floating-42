@@ -58,22 +58,30 @@ export default async function HistoryPage() {
         </p>
       ) : (
         <div className="space-y-4">
-          {weeksWithMeta.map(({ week, winningSongs, winnerTracks, winnerVotes }) => {
+          {weeksWithMeta.map(({ week, winningSongs, winnerTracks, winnerVotes }, idx) => {
             const isActive = !week.winnerId && week.votingOpen !== false;
             const firstTrack = winnerTracks[0] ?? null;
+            const prevWeek = weeksWithMeta[idx - 1]?.week;
+            const showSeasonHeader = idx === 0 || prevWeek?.season !== week.season;
             return (
+              <div key={week.id}>
+              {showSeasonHeader && (
+                <div className="flex items-center gap-3 mb-4 mt-2">
+                  <span className="text-xs font-bold uppercase tracking-widest text-[#a259c4]">Season {week.season}</span>
+                  <div className="flex-1 h-px bg-[#2a2a45]" />
+                </div>
+              )}
               <div
-                key={week.id}
                 className="rounded-2xl border border-[#2a2a45] bg-[#16162a] overflow-hidden"
               >
                 <div className="flex items-center gap-4 p-5">
                   {/* Week badge */}
                   <div className="w-14 h-14 rounded-2xl bg-[#f5841f]/10 border border-[#f5841f]/20 flex flex-col items-center justify-center shrink-0">
                     <span className="text-[10px] font-bold text-[#f5841f]/60 uppercase">
-                      Week
+                      S{week.season}
                     </span>
                     <span className="text-lg font-bold text-[#f5841f] leading-none">
-                      {week.number}
+                      W{week.number}
                     </span>
                   </div>
 
@@ -136,6 +144,7 @@ export default async function HistoryPage() {
                   </div>
                 </div>
               </div>
+            </div>
             );
           })}
         </div>

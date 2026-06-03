@@ -167,7 +167,7 @@ export default async function LeaderboardPage() {
               >
                 <div className="w-10 h-10 rounded-xl bg-[#f4c842]/10 border border-[#f4c842]/20 flex items-center justify-center shrink-0">
                   <span className="text-sm font-bold text-[#f4c842]">
-                    W{week.number}
+                    S{week.season}W{week.number}
                   </span>
                 </div>
                 {tracks[0]?.album.images[0] && (

@@ -18,16 +18,21 @@ export async function POST(req: NextRequest) {
   const denied = requireAdmin(session);
   if (denied) return denied;
 
-  const { theme, startDate, endDate, playlistId } = await req.json();
+  const { theme, startDate, endDate, playlistId, season } = await req.json();
   if (!theme || !startDate || !endDate) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  const lastWeek = await prisma.week.findFirst({ orderBy: { number: "desc" } });
-  const number = (lastWeek?.number ?? 0) + 1;
+  const targetSeason: number = typeof season === "number" ? season : 1;
+  const lastWeekInSeason = await prisma.week.findFirst({
+    where: { season: targetSeason },
+    orderBy: { number: "desc" },
+  });
+  const number = (lastWeekInSeason?.number ?? 0) + 1;
 
   const week = await prisma.week.create({
     data: {
+      season: targetSeason,
       number,
       theme,
       playlistId: playlistId || null,

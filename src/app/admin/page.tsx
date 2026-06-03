@@ -49,10 +49,17 @@ export default async function AdminPage() {
   }));
 
   const playlists = [
-    { label: "Instrumental", id: process.env.SPOTIFY_PLAYLIST_ID ?? "" },
-    { label: "Blue Album Cover", id: process.env.SPOTIFY_PLAYLIST_ID_2 ?? "" },
-    { label: "Holiday", id: process.env.SPOTIFY_PLAYLIST_ID_3 ?? "" },
-    { label: "Beers to Drink Songs To", id: process.env.SPOTIFY_PLAYLIST_ID_4 ?? "" },
+    // Season 1
+    { label: "Instrumental", id: process.env.SPOTIFY_PLAYLIST_ID ?? "", season: 1 },
+    { label: "Blue Album Cover", id: process.env.SPOTIFY_PLAYLIST_ID_2 ?? "", season: 1 },
+    { label: "Holiday", id: process.env.SPOTIFY_PLAYLIST_ID_3 ?? "", season: 1 },
+    { label: "Beers to Drink Songs To", id: process.env.SPOTIFY_PLAYLIST_ID_4 ?? "", season: 1 },
+    // Season 2
+    { label: "Season 2 — Playlist 1", id: process.env.SPOTIFY_PLAYLIST_ID_S2_1 ?? "", season: 2 },
+    { label: "Season 2 — Playlist 2", id: process.env.SPOTIFY_PLAYLIST_ID_S2_2 ?? "", season: 2 },
+    { label: "Season 2 — Playlist 3", id: process.env.SPOTIFY_PLAYLIST_ID_S2_3 ?? "", season: 2 },
+    { label: "Season 2 — Playlist 4", id: process.env.SPOTIFY_PLAYLIST_ID_S2_4 ?? "", season: 2 },
+    { label: "Season 2 — Playlist 5", id: process.env.SPOTIFY_PLAYLIST_ID_S2_5 ?? "", season: 2 },
   ].filter((p) => p.id);
 
   return <AdminPanel allWeeks={mappedWeeks} allUsers={allUsers} playlists={playlists} />;

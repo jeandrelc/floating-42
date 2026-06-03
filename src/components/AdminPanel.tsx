@@ -15,6 +15,7 @@ interface Song {
 
 interface Week {
   id: string;
+  season: number;
   number: number;
   theme: string;
   votingOpen: boolean;
@@ -36,6 +37,7 @@ interface User {
 interface Playlist {
   id: string;
   label: string;
+  season: number;
 }
 
 export function AdminPanel({
@@ -55,6 +57,7 @@ export function AdminPanel({
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
   const [newPlaylistId, setNewPlaylistId] = useState("");
+  const [newSeason, setNewSeason] = useState(1);
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberSpotify, setNewMemberSpotify] = useState("");
@@ -82,7 +85,7 @@ export function AdminPanel({
     const res = await fetch("/api/admin/week", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ theme: newTheme, startDate: newStart, endDate: newEnd, playlistId: newPlaylistId }),
+      body: JSON.stringify({ theme: newTheme, startDate: newStart, endDate: newEnd, playlistId: newPlaylistId, season: newSeason }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -91,6 +94,7 @@ export function AdminPanel({
       setSelectedWeekId(newWeek.id);
       setNewTheme("");
       setNewPlaylistId("");
+      setNewSeason(1);
       toast("Week created!");
     } else {
       toast(data.error ?? "Error", false);
@@ -255,14 +259,25 @@ export function AdminPanel({
             onChange={(e) => {
               const opt = playlists.find((p) => p.id === e.target.value);
               setNewPlaylistId(e.target.value);
-              if (opt && !newTheme) setNewTheme(opt.label);
+              if (opt) {
+                setNewSeason(opt.season);
+                if (!newTheme) setNewTheme(opt.label);
+              }
             }}
             className="sm:col-span-3 px-4 py-2.5 rounded-xl bg-[#0f0f1e] border border-[#2a2a45] text-[#f5f0e0] text-sm focus:outline-none focus:border-[#f5841f]"
           >
             <option value="">Select a playlist…</option>
-            {playlists.map((p) => (
-              <option key={p.id} value={p.id}>{p.label}</option>
-            ))}
+            {[1, 2].map((s) => {
+              const group = playlists.filter((p) => p.season === s);
+              if (!group.length) return null;
+              return (
+                <optgroup key={s} label={`Season ${s}`}>
+                  {group.map((p) => (
+                    <option key={p.id} value={p.id}>{p.label}</option>
+                  ))}
+                </optgroup>
+              );
+            })}
           </select>
           <input
             type="text"
@@ -324,7 +339,7 @@ export function AdminPanel({
                     onClick={() => setSelectedWeekId(isSelected ? null : w.id)}
                   >
                     <div className="w-10 h-10 rounded-xl bg-[#f5841f]/10 border border-[#f5841f]/20 flex flex-col items-center justify-center shrink-0">
-                      <span className="text-[9px] font-bold text-[#f5841f]/60 uppercase leading-none">Wk</span>
+                      <span className="text-[9px] font-bold text-[#f5841f]/60 uppercase leading-none">S{w.season}W</span>
                       <span className="text-sm font-bold text-[#f5841f] leading-none">{w.number}</span>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -547,7 +562,7 @@ export function AdminPanel({
           if (!unmatched.length) return null;
           return (
             <div className="mt-4 p-3 rounded-xl bg-[#0f0f1e] border border-[#2a2a45]">
-              <p className="text-xs font-semibold text-[#f5f0e0]/40 uppercase tracking-wider mb-2">Unmatched song IDs (Week {selectedWeek.number})</p>
+              <p className="text-xs font-semibold text-[#f5f0e0]/40 uppercase tracking-wider mb-2">Unmatched song IDs (S{selectedWeek.season} W{selectedWeek.number})</p>
               <div className="space-y-1">
                 {unmatched.map((id) => (
                   <p key={id} className="text-xs font-mono text-[#f5f0e0]/50 select-all">{id}</p>

@@ -59,7 +59,8 @@ model User {
 
 model Week {
   id          String   @id @default(cuid())
-  number      Int      @unique
+  season      Int      @default(1)
+  number      Int
   theme       String
   playlistId  String?
   startDate   DateTime
@@ -69,6 +70,8 @@ model Week {
 
   songs Song[]
   votes Vote[]
+
+  @@unique([season, number])
 }
 
 model Song {

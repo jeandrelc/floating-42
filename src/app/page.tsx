@@ -123,7 +123,7 @@ export default async function HomePage() {
           />
           <div>
             <p className="text-[#f5841f] font-bold text-sm uppercase tracking-widest mb-1">
-              Week {week.number}
+              Season {week.season} · Week {week.number}
             </p>
             <h1
               className="text-4xl sm:text-5xl font-bold mb-3 text-[#f5f0e0]"
