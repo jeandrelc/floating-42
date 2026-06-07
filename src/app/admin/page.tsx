@@ -9,7 +9,7 @@ export default async function AdminPage() {
   if (!session.user.isAdmin) redirect("/");
 
   const weeks = await prisma.week.findMany({
-    orderBy: { number: "desc" },
+    orderBy: [{ season: "desc" }, { number: "desc" }],
     include: {
       songs: {
         select: {

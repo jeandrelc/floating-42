@@ -21,7 +21,7 @@ export default async function LeaderboardPage() {
       songs: true,
       votes: { select: { songId: true } },
     },
-    orderBy: { number: "desc" },
+    orderBy: [{ season: "desc" }, { number: "desc" }],
   });
 
   // Build Spotify ID → display name map

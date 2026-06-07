@@ -14,7 +14,7 @@ export default async function HomePage() {
   if (!session) redirect("/login");
 
   const week = await prisma.week.findFirst({
-    orderBy: { number: "desc" },
+    orderBy: [{ season: "desc" }, { number: "desc" }],
     include: {
       songs: true,
       votes: { select: { songId: true, userId: true } },

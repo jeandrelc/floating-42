@@ -13,7 +13,7 @@ export default async function HistoryPage() {
   if (!session) redirect("/login");
 
   const weeks = await prisma.week.findMany({
-    orderBy: { number: "desc" },
+    orderBy: [{ season: "desc" }, { number: "desc" }],
     include: {
       songs: true,
       votes: { select: { songId: true } },
