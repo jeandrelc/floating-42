@@ -55,7 +55,7 @@ export default async function AdminPage() {
     { label: "Holiday", id: process.env.SPOTIFY_PLAYLIST_ID_3 ?? "", season: 1 },
     { label: "Beers to Drink Songs To", id: process.env.SPOTIFY_PLAYLIST_ID_4 ?? "", season: 1 },
     // Season 2
-    { label: "Season 2 — Playlist 1", id: process.env.SPOTIFY_PLAYLIST_ID_S2_1 ?? "", season: 2 },
+    { label: "Live Recordings", id: process.env.SPOTIFY_PLAYLIST_ID_S2_1 ?? "", season: 2 },
     { label: "Season 2 — Playlist 2", id: process.env.SPOTIFY_PLAYLIST_ID_S2_2 ?? "", season: 2 },
     { label: "Season 2 — Playlist 3", id: process.env.SPOTIFY_PLAYLIST_ID_S2_3 ?? "", season: 2 },
     { label: "Season 2 — Playlist 4", id: process.env.SPOTIFY_PLAYLIST_ID_S2_4 ?? "", season: 2 },

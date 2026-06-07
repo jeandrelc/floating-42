@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const week = await prisma.week.findFirst({
-    orderBy: { number: "desc" },
+    orderBy: [{ season: "desc" }, { number: "desc" }],
     include: {
       songs: true,
       votes: { select: { songId: true, userId: true } },
